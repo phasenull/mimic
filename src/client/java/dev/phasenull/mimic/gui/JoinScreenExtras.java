@@ -6,7 +6,9 @@ import dev.phasenull.mimic.debug.ConnectionOverlay;
 import dev.phasenull.mimic.debug.CopyLogsButton;
 import dev.phasenull.mimic.debug.JoinSession;
 import dev.phasenull.mimic.debug.JoinStatus;
+import com.mojang.blaze3d.Blaze3D;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -17,7 +19,10 @@ import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
+import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 /**
@@ -61,9 +66,11 @@ public final class JoinScreenExtras {
 				RetryLoop.start(client, JoinSession.serverData());
 			}
 			b.setMessage(retryLabel());
-		}).bounds(width - 164, height - 24, 160, 20).build();
+		}).bounds(4, height - 72, 160, 20).build();
 		retry.active = JoinSession.serverData() != null;
 		widgets.add(retry);
+		widgets.add(Button.builder(Component.translatable("mimic.report.open_folder"), b -> openReportsFolder())
+			.bounds(width - 164, height - 24, 160, 20).build());
 
 		// AFTER_INIT also fires on resize; only a newly opened disconnect screen counts as a failed try.
 		if (lastDisconnectScreen.get() != screen) {
@@ -87,6 +94,16 @@ public final class JoinScreenExtras {
 			String retry = "Retrying until connected: try " + RetryLoop.tries() + "/" + RetryLoop.MAX_TRIES;
 			g.centeredText(client.font, retry, screen.width / 2, y + client.font.lineHeight + 2, 0xFFFFFF55);
 		}
+	}
+
+	private static void openReportsFolder() {
+		Path dir = FabricLoader.getInstance().getConfigDir().resolve("mimic").resolve("reports");
+		try {
+			Files.createDirectories(dir);
+		} catch (IOException ignored) {
+			// Opening fails visibly enough if the folder can't exist.
+		}
+		Blaze3D.openPath(dir);
 	}
 
 	private static Component retryLabel() {
