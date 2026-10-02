@@ -177,7 +177,7 @@ public final class MicrosoftAuth {
 			  "Properties": {
 			    "AuthMethod": "RPS",
 			    "SiteName": "user.auth.xboxlive.com",
-			    "RpsTicket": "d=%s"
+			    "RpsTicket": "%s"
 			  },
 			  "RelyingParty": "http://auth.xboxlive.com",
 			  "TokenType": "JWT"
