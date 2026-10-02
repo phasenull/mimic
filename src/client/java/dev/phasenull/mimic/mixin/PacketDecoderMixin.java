@@ -26,7 +26,8 @@ public abstract class PacketDecoderMixin {
 
 	@Inject(method = "decode", at = @At("RETURN"))
 	private void mimic$count(ChannelHandlerContext ctx, ByteBuf in, List<Object> out, CallbackInfo ci) {
-		if (!out.isEmpty() && out.getLast() instanceof Packet<?> packet && packet.type().flow() == PacketFlow.CLIENTBOUND) {
+		if (ConnectionDebug.isTrackedChannel(ctx.channel()) && !out.isEmpty() && out.getLast() instanceof Packet<?> packet
+				&& packet.type().flow() == PacketFlow.CLIENTBOUND) {
 			ConnectionDebug.countBytes(packet, mimic$frameBytes);
 		}
 	}

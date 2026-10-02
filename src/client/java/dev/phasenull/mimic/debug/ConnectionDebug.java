@@ -39,6 +39,8 @@ public final class ConnectionDebug {
 	private static volatile String last = "";
 	private static volatile long lastAt;
 	private static volatile String lastDisconnectReason;
+	private static volatile Object tracked;
+	private static volatile io.netty.channel.Channel trackedChannel;
 	private static volatile long worldBytes;
 	private static volatile long modBytes;
 
@@ -64,6 +66,8 @@ public final class ConnectionDebug {
 		worldBytes = 0;
 		modBytes = 0;
 		phase = "handshake";
+		tracked = null;
+		trackedChannel = null;
 		active = true;
 		JoinStatus.clear();
 		event("CONNECT", address);
@@ -222,6 +226,22 @@ public final class ConnectionDebug {
 			return String.format("%.1f KB", bytes / 1024.0);
 		}
 		return String.format("%.2f MB", bytes / (1024.0 * 1024.0));
+	}
+
+	/** Called when a client connection enters the login protocol; the first one after begin() is the join. */
+	public static void track(Object connection, io.netty.channel.Channel channel) {
+		if (active && tracked == null) {
+			tracked = connection;
+			trackedChannel = channel;
+		}
+	}
+
+	public static boolean isTracked(Object connection) {
+		return connection != null && connection == tracked;
+	}
+
+	public static boolean isTrackedChannel(io.netty.channel.Channel channel) {
+		return channel != null && channel == trackedChannel;
 	}
 
 	public static String lastDisconnectReason() {
