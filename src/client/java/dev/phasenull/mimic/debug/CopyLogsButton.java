@@ -1,6 +1,8 @@
 package dev.phasenull.mimic.debug;
 
+import dev.phasenull.mimic.MimicBuild;
 import dev.phasenull.mimic.MimicClient;
+import net.minecraft.util.CommonColors;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.minecraft.client.gui.components.Button;
@@ -31,6 +33,8 @@ public final class CopyLogsButton {
 					b.setMessage(Component.translatable("mimic.report.failed"));
 				}
 			}).bounds(4, height - 24, W, 20).build());
+			ScreenEvents.afterExtract(screen).register((s, g, mouseX, mouseY, partialTick) ->
+				g.text(client.font, MimicBuild.label(), W + 10, s.height - 18, CommonColors.GRAY));
 		});
 	}
 }

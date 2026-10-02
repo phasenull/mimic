@@ -1,5 +1,6 @@
 package dev.phasenull.mimic.debug;
 
+import dev.phasenull.mimic.MimicBuild;
 import dev.phasenull.mimic.MimicClient;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
@@ -31,6 +32,7 @@ public final class JoinReport {
 
 		StringBuilder sb = new StringBuilder();
 		sb.append("Mimic join report ").append(Instant.now()).append('\n');
+		sb.append("Mimic build: ").append(MimicBuild.commit()).append('\n');
 		sb.append("Disconnect reason: ").append(disconnectReason == null ? "(unknown)" : disconnectReason).append('\n');
 		sb.append("Last status: ").append(ConnectionDebug.status()).append('\n');
 		sb.append("Mods: ");

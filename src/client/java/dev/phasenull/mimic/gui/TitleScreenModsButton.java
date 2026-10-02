@@ -1,6 +1,8 @@
 package dev.phasenull.mimic.gui;
 
+import dev.phasenull.mimic.MimicBuild;
 import dev.phasenull.mimic.devauth.DevAuth;
+import net.minecraft.util.CommonColors;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.minecraft.client.Minecraft;
@@ -23,6 +25,8 @@ public final class TitleScreenModsButton {
 		ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
 			if (screen instanceof TitleScreen) {
 				addButton(client, screen);
+				ScreenEvents.afterExtract(screen).register((s, g, mouseX, mouseY, partialTick) ->
+					g.text(client.font, MimicBuild.label(), 2, s.height - 20, CommonColors.GRAY));
 			}
 		});
 	}

@@ -21,6 +21,9 @@
 			"environment": "client"
 		}
 	],
+	"custom": {
+		"mimic:commit": "${commit}"
+	},
 	"suggests": {
 		"viafabricplus": "*"
 	},

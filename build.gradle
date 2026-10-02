@@ -40,10 +40,16 @@ dependencies {
 
 processResources {
 	def version = project.version
+	// Short commit hash, with "-dirty" when tracked files have uncommitted changes.
+	def commit = providers.exec {
+		commandLine "git", "describe", "--always", "--dirty", "--abbrev=7", "--exclude=*"
+		ignoreExitValue = true
+	}.standardOutput.asText.map { it.trim() ?: "unknown" }
 	inputs.property "version", version
+	inputs.property "commit", commit
 
 	filesMatching("fabric.mod.json") {
-		expand "version": version
+		expand "version": version, "commit": commit.get()
 	}
 }
 

@@ -1,5 +1,6 @@
 package dev.phasenull.mimic.debug;
 
+import dev.phasenull.mimic.MimicBuild;
 import dev.phasenull.mimic.MimicClient;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.protocol.Packet;
@@ -234,6 +235,6 @@ public final class ConnectionDebug {
 	/** One-line status for the overlay. */
 	public static String status() {
 		long ago = (System.currentTimeMillis() - lastAt) / 100;
-		return "Mimic: " + phase + " | in " + in + " / out " + out + " | last: " + last + " (" + ago / 10 + "." + ago % 10 + "s ago)";
+		return MimicBuild.label() + " | " + phase + " | in " + in + " / out " + out + " | last: " + last + " (" + ago / 10 + "." + ago % 10 + "s ago)";
 	}
 }
