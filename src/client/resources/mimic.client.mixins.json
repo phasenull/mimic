@@ -8,6 +8,7 @@
 		"PacketDecoderMixin",
 		"ConnectScreenMixin",
 		"ClientboundUpdateTagsPacketMixin",
+		"RegistryLoadTaskMixin",
 		"MainMixin",
 		"MinecraftAccessor"
 	],
