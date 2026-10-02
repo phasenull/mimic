@@ -21,9 +21,6 @@
 			"environment": "client"
 		}
 	],
-	"suggests": {
-		"viafabricplus": "*"
-	},
 	"depends": {
 		"fabricloader": ">=0.19.5",
 		"minecraft": "~26.3",
