@@ -299,7 +299,7 @@ public final class NeoForgeBypass {
 			for (int i = 0; i < count; i++) {
 				buf.readVarInt();
 				Identifier id = Identifier.parse(buf.readUtf());
-				JoinSession.entry(registry, id.toString(), local != null && local.containsKey(id));
+				JoinSession.entry(registry, id.toString(), local != null && dev.phasenull.mimic.placeholder.Placeholders.hasReal(local, id));
 			}
 		} catch (RuntimeException e) {
 			MimicClient.LOGGER.debug("[NeoForge] Could not read snapshot entries of {}", registry, e);

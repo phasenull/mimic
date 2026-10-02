@@ -7,6 +7,7 @@ import dev.phasenull.mimic.command.MimicCommand;
 import dev.phasenull.mimic.debug.ConnectionOverlay;
 import dev.phasenull.mimic.debug.CopyLogsButton;
 import dev.phasenull.mimic.debug.FailedServers;
+import dev.phasenull.mimic.placeholder.PlaceholderHud;
 import dev.phasenull.mimic.debug.HotReloadNotifier;
 import dev.phasenull.mimic.gui.JoinScreenExtras;
 import dev.phasenull.mimic.gui.TitleScreenModsButton;
@@ -25,6 +26,7 @@ public class MimicClient implements ClientModInitializer {
 		ConnectionOverlay.register();
 		CopyLogsButton.register();
 		FailedServers.register();
+		PlaceholderHud.register();
 		JoinScreenExtras.register();
 		RetryLoop.register();
 		HotReloadNotifier.start();

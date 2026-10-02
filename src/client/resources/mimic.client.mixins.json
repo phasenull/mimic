@@ -6,6 +6,7 @@
 		"ClientCommonPacketListenerImplMixin",
 		"ClientPacketListenerMixin",
 		"ServerEntryMixin",
+		"EntityRenderDispatcherMixin",
 		"ClientCommonPacketListenerImplAccessor",
 		"ConnectionMixin",
 		"PacketDecoderMixin",
