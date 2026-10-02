@@ -1,6 +1,7 @@
 package dev.phasenull.mimic;
 
 import dev.phasenull.mimic.command.MimicCommand;
+import dev.phasenull.mimic.gui.TitleScreenModsButton;
 import net.fabricmc.api.ClientModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +13,7 @@ public class MimicClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		MimicCommand.register();
+		TitleScreenModsButton.register();
 		LOGGER.info("Mimic loaded");
 	}
 }

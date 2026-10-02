@@ -1,0 +1,12 @@
+{
+	"mimic.mods.button": "Mods",
+	"mimic.mods.title": "Mods (%s)",
+	"mimic.mods.search": "Search mods...",
+	"mimic.mods.select": "Select a mod to see its details.",
+	"mimic.mods.version": "Version:",
+	"mimic.mods.id": "ID:",
+	"mimic.mods.authors": "Authors:",
+	"mimic.mods.license": "License:",
+	"mimic.mods.bundled_in": "Bundled in:",
+	"mimic.mods.includes": "Bundled mods:"
+}
