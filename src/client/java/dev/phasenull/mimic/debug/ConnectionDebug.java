@@ -54,12 +54,14 @@ public final class ConnectionDebug {
 		out = 0;
 		phase = "handshake";
 		active = true;
+		JoinStatus.clear();
 		event("CONNECT", address);
 	}
 
 	public static void protocol(String direction, String protocol) {
 		if (direction.equals("in")) {
 			phase = protocol;
+			JoinStatus.post("Phase: " + protocol);
 		}
 		event("PROTOCOL", direction + " -> " + protocol);
 	}

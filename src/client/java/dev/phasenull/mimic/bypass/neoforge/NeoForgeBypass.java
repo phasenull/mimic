@@ -3,6 +3,7 @@ package dev.phasenull.mimic.bypass.neoforge;
 import dev.phasenull.mimic.MimicClient;
 import dev.phasenull.mimic.bypass.RawPayload;
 import dev.phasenull.mimic.cache.ModCache;
+import dev.phasenull.mimic.debug.JoinStatus;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworking;
@@ -95,7 +96,7 @@ public final class NeoForgeBypass {
 		ClientConfigurationNetworking.registerGlobalReceiver(QUERY, (p, ctx) -> onQuery(ctx));
 		ClientConfigurationNetworking.registerGlobalReceiver(SETUP, (p, ctx) -> onSetupAccepted());
 		ClientConfigurationNetworking.registerGlobalReceiver(SETUP_FAILED, (p, ctx) -> onSetupFailed(p.data()));
-		ClientConfigurationNetworking.registerGlobalReceiver(REGISTRY_SYNC_START, (p, ctx) -> MimicClient.LOGGER.info("[NeoForge] Registry sync started"));
+		ClientConfigurationNetworking.registerGlobalReceiver(REGISTRY_SYNC_START, (p, ctx) -> JoinStatus.info("[NeoForge] Registry sync started"));
 		ClientConfigurationNetworking.registerGlobalReceiver(REGISTRY, (p, ctx) -> onRegistry(p.data()));
 		ClientConfigurationNetworking.registerGlobalReceiver(REGISTRY_SYNC_DONE, (p, ctx) -> reply(ctx, REGISTRY_SYNC_DONE, new byte[0]));
 		ClientConfigurationNetworking.registerGlobalReceiver(DATA_MAPS, (p, ctx) -> reply(ctx, DATA_MAPS_REPLY, dataMapsReply(p.data())));
@@ -121,7 +122,7 @@ public final class NeoForgeBypass {
 		learnedThisAttempt = false;
 
 		List<NeoForgeChannelStore.Channel> learned = NeoForgeChannelStore.channels(server);
-		MimicClient.LOGGER.info("[NeoForge] Server {} is running NeoForge; claiming {} built-in + {} learned channels", server, BUILTIN.size(), learned.size());
+		JoinStatus.info("[NeoForge] Server {} is running NeoForge; claiming {} built-in + {} learned channels", server, BUILTIN.size(), learned.size());
 
 		FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
 		buf.writeVarInt(2);
@@ -152,7 +153,7 @@ public final class NeoForgeBypass {
 	private static void onSetupAccepted() {
 		reconnects.remove(server);
 		learnedThisAttempt = false;
-		MimicClient.LOGGER.info("[NeoForge] Channel negotiation with {} passed", server);
+		JoinStatus.info("[NeoForge] Channel negotiation with {} passed", server);
 	}
 
 	private static void onSetupFailed(byte[] data) {
@@ -171,7 +172,7 @@ public final class NeoForgeBypass {
 			while (reason.key().endsWith(".failure.mod") && reason.args().size() == 2 && reason.args().get(1) instanceof Text inner) {
 				reason = inner;
 			}
-			MimicClient.LOGGER.info("[NeoForge] {} -> {}", channel, reason);
+			JoinStatus.info("[NeoForge] {} -> {}", channel, reason);
 			changed |= learn(channel, reason);
 			ModCache.get().mod(namespace(channel), ModCache.UNKNOWN_VERSION);
 		}
@@ -228,7 +229,7 @@ public final class NeoForgeBypass {
 			reconnects.remove(server);
 			return;
 		}
-		MimicClient.LOGGER.info("[NeoForge] Learned new channels, reconnecting to {} (try {}/{})", server, attempt, MAX_AUTO_RECONNECTS);
+		JoinStatus.info("[NeoForge] Learned new channels, reconnecting to {} (try {}/{})", server, attempt, MAX_AUTO_RECONNECTS);
 		client.execute(() -> ConnectScreen.startConnecting(new JoinMultiplayerScreen(new TitleScreen()), client,
 			ServerAddress.parseString(data.ip), data, false, null));
 	}
@@ -244,7 +245,7 @@ public final class NeoForgeBypass {
 		} catch (IOException e) {
 			MimicClient.LOGGER.warn("[NeoForge] Could not save registry snapshot {}", registry, e);
 		}
-		MimicClient.LOGGER.info("[NeoForge] Received registry snapshot {} ({} bytes)", registry, data.length);
+		JoinStatus.info("[NeoForge] Received registry snapshot {} ({} bytes)", registry, data.length);
 	}
 
 	/** Claims to know every data map the server offers. */
