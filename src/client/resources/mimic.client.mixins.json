@@ -6,6 +6,7 @@
 		"ClientCommonPacketListenerImplMixin",
 		"ConnectionMixin",
 		"ConnectScreenMixin",
+		"ClientboundUpdateTagsPacketMixin",
 		"MainMixin",
 		"MinecraftAccessor"
 	],
