@@ -64,6 +64,8 @@ public final class NeoForgeBypass {
 	private static final CustomPacketPayload.Type<RawPayload> DATA_MAPS_REPLY = RawPayload.type(NS, "known_registry_data_maps_reply");
 	private static final CustomPacketPayload.Type<RawPayload> ENUMS_ACK = RawPayload.type(NS, "extensible_enum_ack");
 	private static final CustomPacketPayload.Type<RawPayload> FEATURE_FLAGS_ACK = RawPayload.type(NS, "feature_flags_ack");
+	/** Both directions, both protocols; joined before decoding by {@link SplitPacketJoiner}. */
+	private static final Claim SPLIT = new Claim(RawPayload.type(NS, "split"), -1);
 
 	/** NeoForge's own configuration channels (all version "1", optional on the server). */
 	private static final List<Claim> BUILTIN = List.of(
@@ -75,7 +77,8 @@ public final class NeoForgeBypass {
 		new Claim(ENUMS, FLOW_CLIENTBOUND),
 		new Claim(ENUMS_ACK, FLOW_SERVERBOUND),
 		new Claim(FEATURE_FLAGS, FLOW_CLIENTBOUND),
-		new Claim(FEATURE_FLAGS_ACK, FLOW_SERVERBOUND));
+		new Claim(FEATURE_FLAGS_ACK, FLOW_SERVERBOUND),
+		SPLIT);
 
 	private record Claim(CustomPacketPayload.Type<RawPayload> type, int flow) {}
 
@@ -145,7 +148,8 @@ public final class NeoForgeBypass {
 		// Learned channels go in both protocols: failure reports don't say which one they belong to,
 		// and an optional claim the server doesn't have is simply dropped.
 		buf.writeVarInt(PROTOCOL_PLAY);
-		buf.writeVarInt(learned.size());
+		buf.writeVarInt(1 + learned.size());
+		writeComponent(buf, SPLIT.type().id().toString(), "1", SPLIT.flow());
 		learned.forEach(c -> writeComponent(buf, c.id, c.version, flowOrdinal(c.flow)));
 		reply(ctx, QUERY, bytes(buf));
 	}

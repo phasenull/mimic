@@ -1,5 +1,6 @@
 package dev.phasenull.mimic.mixin;
 
+import dev.phasenull.mimic.bypass.neoforge.SplitPacketJoiner;
 import dev.phasenull.mimic.debug.ConnectionDebug;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -62,6 +63,9 @@ public abstract class ConnectionMixin {
 		mimic$maybeTrack(info.id());
 		if (mimic$tracked()) {
 			ConnectionDebug.protocol("in", name(info.id()));
+			if (info.id() == ConnectionProtocol.CONFIGURATION) {
+				SplitPacketJoiner.install(channel);
+			}
 		}
 	}
 
