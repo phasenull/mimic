@@ -86,6 +86,8 @@ public final class NeoForgeBypass {
 	private static volatile ServerData serverData;
 	private static volatile boolean learnedThisAttempt;
 	private static final Map<String, Integer> reconnects = new ConcurrentHashMap<>();
+	/** Versions claimed in this attempt, to tell the server's version apart in a mismatch report. */
+	private static final Map<String, String> claimedVersions = new ConcurrentHashMap<>();
 
 	private NeoForgeBypass() {}
 
@@ -136,6 +138,8 @@ public final class NeoForgeBypass {
 		JoinStatus.info("[NeoForge] Server {} is running NeoForge; claiming {} built-in + {} learned + {} from other servers",
 			server, BUILTIN.size(), learned.size(), borrowed.size());
 		learned.addAll(borrowed);
+		claimedVersions.clear();
+		learned.forEach(c -> claimedVersions.put(c.id, c.version));
 
 		FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
 		buf.writeVarInt(2);
@@ -207,7 +211,7 @@ public final class NeoForgeBypass {
 			return NeoForgeChannelStore.remove(server, channel);
 		}
 		if (key.endsWith(".version.mismatch") && !args.isEmpty()) {
-			String serverVersion = String.valueOf(args.getFirst());
+			String serverVersion = serverVersion(channel, args);
 			boolean changed = NeoForgeChannelStore.update(server, channel, c -> {
 				c.version = serverVersion;
 				c.versionConfirmed = true;
@@ -229,6 +233,21 @@ public final class NeoForgeBypass {
 		}
 		MimicClient.LOGGER.warn("[NeoForge] Don't know how to fix {} ({})", channel, key);
 		return false;
+	}
+
+	/**
+	 * NeoForge 1.21.1 reports (server version, client version); 26.x reports (client, server). Whichever
+	 * isn't the version this client claimed is the server's.
+	 */
+	private static String serverVersion(String channel, List<Object> args) {
+		String first = String.valueOf(args.getFirst());
+		if (args.size() < 2) {
+			return first;
+		}
+		String second = String.valueOf(args.get(1));
+		String claimed = claimedVersions.getOrDefault(channel, BUILTIN.stream()
+			.anyMatch(c -> c.type().id().toString().equals(channel)) ? "1" : null);
+		return first.equals(claimed) ? second : first;
 	}
 
 	private static void maybeReconnect(Minecraft client) {

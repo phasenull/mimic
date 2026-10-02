@@ -125,7 +125,7 @@ public final class ConnectionDebug {
 		String id = packet.type().id().toString();
 		String payload = packet instanceof ServerboundCustomPayloadPacket p ? p.payload().type().id().toString() : null;
 		if (blocked.contains(id) || (payload != null && blocked.contains(payload))) {
-			write("BLK play " + name(packet));
+			write("BLK " + phase + " " + name(packet));
 			return true;
 		}
 		return false;
