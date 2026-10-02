@@ -3,7 +3,8 @@
 	"package": "dev.phasenull.mimic.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
-		"ClientCommonPacketListenerImplMixin"
+		"ClientCommonPacketListenerImplMixin",
+		"MainMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
