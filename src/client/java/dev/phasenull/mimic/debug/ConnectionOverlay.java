@@ -2,6 +2,9 @@ package dev.phasenull.mimic.debug;
 
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.screens.DisconnectedScreen;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.util.CommonColors;
 
 import java.util.List;
@@ -16,6 +19,11 @@ public final class ConnectionOverlay {
 	private ConnectionOverlay() {}
 
 	public static void register() {
+		ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
+			if (screen instanceof TitleScreen || screen instanceof JoinMultiplayerScreen || screen instanceof DisconnectedScreen) {
+				ConnectionDebug.endIfActive("back on " + screen.getClass().getSimpleName());
+			}
+		});
 		ScreenEvents.AFTER_INIT.register((client, screen, width, height) ->
 			ScreenEvents.afterExtract(screen).register((s, g, mouseX, mouseY, partialTick) -> {
 				if (!ConnectionDebug.active() || client.level != null) {

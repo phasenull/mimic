@@ -144,6 +144,15 @@ public final class ConnectionDebug {
 		event(kind, detail);
 	}
 
+	/** Ends a join attempt that never reached the login step (e.g. failed to connect), so the overlay goes away. */
+	public static synchronized void endIfActive(String why) {
+		if (active) {
+			event("END", why);
+			active = false;
+			close();
+		}
+	}
+
 	public static void error(Throwable t) {
 		event("ERROR", t.toString());
 	}
