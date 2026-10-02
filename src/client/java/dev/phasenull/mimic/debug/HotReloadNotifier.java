@@ -2,7 +2,13 @@ package dev.phasenull.mimic.debug;
 
 import dev.phasenull.mimic.MimicClient;
 import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.network.chat.Component;
 
@@ -25,7 +31,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Dev only: VS Code writes recompiled classes to bin/ right before it hot-swaps them, so a change there is
- * shown as a toast. Mixin classes can't be hot-swapped, so changing one asks for a restart instead.
+ * announced with a sound, a toast and a banner at the top of the screen. Mixin classes can't be
+ * hot-swapped, so changing one asks for a restart instead.
  */
 public final class HotReloadNotifier {
 	private static final SystemToast.SystemToastId TOAST = new SystemToast.SystemToastId(4000L);
@@ -33,6 +40,10 @@ public final class HotReloadNotifier {
 	// VS Code may still be finishing its own build right after launch; that isn't a hot reload.
 	private static final long STARTUP_GRACE_MILLIS = 15_000;
 	private static final long STARTED_AT = System.currentTimeMillis();
+	private static final long BANNER_MILLIS = 3000;
+	private static volatile String bannerText;
+	private static volatile boolean bannerWarn;
+	private static volatile long bannerUntil;
 
 	private HotReloadNotifier() {}
 
@@ -40,6 +51,10 @@ public final class HotReloadNotifier {
 		if (!FabricLoader.getInstance().isDevelopmentEnvironment()) {
 			return;
 		}
+		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MimicClient.MOD_ID, "hot_reload_banner"),
+			(g, delta) -> drawBanner(g, Minecraft.getInstance().getWindow().getGuiScaledWidth()));
+		ScreenEvents.AFTER_INIT.register((client, screen, width, height) ->
+			ScreenEvents.afterExtract(screen).register((s, g, mouseX, mouseY, partialTick) -> drawBanner(g, s.width)));
 		Path project = FabricLoader.getInstance().getGameDir().toAbsolutePath().getParent();
 		List<Path> roots = List.of(project.resolve("bin").resolve("client"), project.resolve("bin").resolve("main"));
 		Thread thread = new Thread(() -> watch(roots), "Mimic hot reload watcher");
@@ -103,7 +118,30 @@ public final class HotReloadNotifier {
 		Component body = Component.literal(names);
 		MimicClient.LOGGER.info("{} ({})", title.getString(), names);
 		Minecraft mc = Minecraft.getInstance();
-		mc.execute(() -> SystemToast.addOrUpdate(mc.gui.toastManager(), TOAST, title, body));
+		mc.execute(() -> {
+			bannerText = title.getString() + ": " + names;
+			bannerWarn = mixin;
+			bannerUntil = System.currentTimeMillis() + BANNER_MILLIS;
+			SystemToast.addOrUpdate(mc.gui.toastManager(), TOAST, title, body);
+			mc.getSoundManager().play(SimpleSoundInstance.forUI(mixin ? SoundEvents.VILLAGER_NO : SoundEvents.PLAYER_LEVELUP, 1.0F));
+		});
+	}
+
+	/** A banner at the top of the screen, drawn in game (HUD) and over any open screen. */
+	private static void drawBanner(GuiGraphicsExtractor g, int screenWidth) {
+		long left = bannerUntil - System.currentTimeMillis();
+		String text = bannerText;
+		if (left <= 0 || text == null) {
+			return;
+		}
+		Minecraft mc = Minecraft.getInstance();
+		int alpha = (int) (255 * Math.min(1.0, left / 500.0));
+		String shown = mc.font.plainSubstrByWidth(text, screenWidth - 24);
+		int w = mc.font.width(shown) + 12;
+		int x = (screenWidth - w) / 2;
+		g.fill(x, 4, x + w, 4 + mc.font.lineHeight + 8, (alpha * 3 / 4) << 24);
+		int color = bannerWarn ? 0xFFAA00 : 0x55FF55;
+		g.centeredText(mc.font, shown, screenWidth / 2, 8, (alpha << 24) | color);
 	}
 
 	private static void registerTree(WatchService watcher, Path root) throws IOException {
