@@ -5,6 +5,7 @@
 	"client": [
 		"ClientCommonPacketListenerImplMixin",
 		"ConnectionMixin",
+		"PacketDecoderMixin",
 		"ConnectScreenMixin",
 		"ClientboundUpdateTagsPacketMixin",
 		"MainMixin",

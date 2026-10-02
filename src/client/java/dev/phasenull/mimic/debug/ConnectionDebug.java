@@ -33,6 +33,8 @@ public final class ConnectionDebug {
 	private static volatile int out;
 	private static volatile String last = "";
 	private static volatile long lastAt;
+	private static volatile long worldBytes;
+	private static volatile long modBytes;
 
 	private ConnectionDebug() {}
 
@@ -52,6 +54,8 @@ public final class ConnectionDebug {
 		playLogged = 0;
 		in = 0;
 		out = 0;
+		worldBytes = 0;
+		modBytes = 0;
 		phase = "handshake";
 		active = true;
 		JoinStatus.clear();
@@ -136,6 +140,35 @@ public final class ConnectionDebug {
 			}
 			writer = null;
 		}
+	}
+
+	/** Counts a received packet's decompressed size; non-vanilla custom payloads count as mod data. Netty thread only. */
+	public static void countBytes(Packet<?> packet, int bytes) {
+		if (packet instanceof ClientboundCustomPayloadPacket p && !p.payload().type().id().getNamespace().equals("minecraft")) {
+			modBytes += bytes;
+		} else {
+			worldBytes += bytes;
+		}
+	}
+
+	/** e.g. "1.42 MB (world 1.10 MB / mods 324.5 KB)", or null when nothing was received yet. */
+	public static String receivedSummary() {
+		long world = worldBytes;
+		long mods = modBytes;
+		if (!active || world + mods == 0) {
+			return null;
+		}
+		return size(world + mods) + " (world " + size(world) + " / mods " + size(mods) + ")";
+	}
+
+	private static String size(long bytes) {
+		if (bytes < 1024) {
+			return bytes + " B";
+		}
+		if (bytes < 1024 * 1024) {
+			return String.format("%.1f KB", bytes / 1024.0);
+		}
+		return String.format("%.2f MB", bytes / (1024.0 * 1024.0));
 	}
 
 	public static boolean active() {
