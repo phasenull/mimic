@@ -35,6 +35,7 @@ public final class ConnectionDebug {
 	private static volatile int out;
 	private static volatile String last = "";
 	private static volatile long lastAt;
+	private static volatile String lastDisconnectReason;
 	private static volatile long worldBytes;
 	private static volatile long modBytes;
 
@@ -123,6 +124,7 @@ public final class ConnectionDebug {
 	}
 
 	public static void disconnected(String reason) {
+		lastDisconnectReason = reason;
 		event("DISCONNECT", reason);
 		active = false;
 		synchronized (ConnectionDebug.class) {
@@ -211,6 +213,10 @@ public final class ConnectionDebug {
 			return String.format("%.1f KB", bytes / 1024.0);
 		}
 		return String.format("%.2f MB", bytes / (1024.0 * 1024.0));
+	}
+
+	public static String lastDisconnectReason() {
+		return lastDisconnectReason;
 	}
 
 	public static boolean active() {

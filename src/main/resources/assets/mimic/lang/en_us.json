@@ -28,5 +28,8 @@
 	"mimic.auth.finish": "Finish sign-in",
 	"mimic.auth.paste_hint": "Paste the URL here",
 	"mimic.auth.paste_step1": "Sign in on the page that opened.",
-	"mimic.auth.paste_step2": "Then copy the blank page's URL and paste it:"
+	"mimic.auth.paste_step2": "Then copy the blank page's URL and paste it:",
+	"mimic.report.copy": "Copy logs",
+	"mimic.report.copied": "Path copied!",
+	"mimic.report.failed": "Report failed"
 }

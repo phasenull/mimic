@@ -3,6 +3,7 @@ package dev.phasenull.mimic;
 import dev.phasenull.mimic.bypass.neoforge.NeoForgeBypass;
 import dev.phasenull.mimic.command.MimicCommand;
 import dev.phasenull.mimic.debug.ConnectionOverlay;
+import dev.phasenull.mimic.debug.CopyLogsButton;
 import dev.phasenull.mimic.gui.TitleScreenModsButton;
 import net.fabricmc.api.ClientModInitializer;
 import org.slf4j.Logger;
@@ -17,6 +18,7 @@ public class MimicClient implements ClientModInitializer {
 		MimicCommand.register();
 		TitleScreenModsButton.register();
 		ConnectionOverlay.register();
+		CopyLogsButton.register();
 		NeoForgeBypass.register();
 		LOGGER.info("Mimic loaded");
 	}
