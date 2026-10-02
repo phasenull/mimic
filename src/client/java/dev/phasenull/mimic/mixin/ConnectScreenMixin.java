@@ -31,7 +31,7 @@ public abstract class ConnectScreenMixin {
 			boolean quickPlay, TransferState transfer, CallbackInfo ci) {
 		ConnectionDebug.begin(address.toString());
 		RegistryStandIns.reset();
-		LoginQueryAnswers.reload();
+		LoginQueryAnswers.reload(data);
 		NeoForgeBypass.onConnecting(address, data);
 	}
 }

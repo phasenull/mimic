@@ -1,5 +1,6 @@
 package dev.phasenull.mimic;
 
+import dev.phasenull.mimic.bypass.LoginQueryAnswers;
 import dev.phasenull.mimic.bypass.neoforge.NeoForgeBypass;
 import dev.phasenull.mimic.command.MimicCommand;
 import dev.phasenull.mimic.debug.ConnectionOverlay;
@@ -22,6 +23,7 @@ public class MimicClient implements ClientModInitializer {
 		CopyLogsButton.register();
 		HotReloadNotifier.start();
 		NeoForgeBypass.register();
+		LoginQueryAnswers.registerReconnect();
 		LOGGER.info("Mimic loaded");
 	}
 }
