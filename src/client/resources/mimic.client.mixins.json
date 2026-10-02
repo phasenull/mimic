@@ -5,6 +5,7 @@
 	"client": [
 		"ClientCommonPacketListenerImplMixin",
 		"ConnectionMixin",
+		"ConnectScreenMixin",
 		"MainMixin",
 		"MinecraftAccessor"
 	],
