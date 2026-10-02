@@ -44,8 +44,9 @@ public abstract class MappedRegistryHolesMixin<T> {
 	}
 
 	@SuppressWarnings("unchecked")
+	// ordinal 0: only the old-id scan; the later get() checks that a slot is still empty before filling it.
 	@WrapOperation(method = "remap", remap = false, require = 0, at = @At(value = "INVOKE",
-		target = "Lit/unimi/dsi/fastutil/objects/ObjectList;get(I)Ljava/lang/Object;"))
+		target = "Lit/unimi/dsi/fastutil/objects/ObjectList;get(I)Ljava/lang/Object;", ordinal = 0))
 	private Object mimic$holeAsDummy(ObjectList<?> list, int index, Operation<Object> original) {
 		Object value = original.call(list, index);
 		if (value != null || list != byId) {
