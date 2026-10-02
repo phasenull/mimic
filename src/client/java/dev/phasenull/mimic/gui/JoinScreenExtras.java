@@ -7,6 +7,7 @@ import dev.phasenull.mimic.debug.ConnectionOverlay;
 import dev.phasenull.mimic.debug.CopyLogsButton;
 import dev.phasenull.mimic.debug.JoinSession;
 import dev.phasenull.mimic.debug.JoinStatus;
+import dev.phasenull.mimic.debug.PacketFeed;
 import com.mojang.blaze3d.Blaze3D;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.loader.api.FabricLoader;
@@ -54,13 +55,24 @@ public final class JoinScreenExtras {
 	/** Under the menu's lowest button (Disconnect): "Server mods", then the Mimic build. */
 	private static void onPauseScreen(Minecraft client, Screen screen) {
 		int bottom = ConnectionOverlay.feedTop(screen);
-		if (JoinSession.hasData()) {
-			Screens.getWidgets(screen).add(serverModsButton(client, screen, screen.width / 2 - 50, bottom));
-			bottom += 24;
+		boolean mods = JoinSession.hasData();
+		int x = screen.width / 2 - (mods ? 102 : 50);
+		if (mods) {
+			Screens.getWidgets(screen).add(serverModsButton(client, screen, x, bottom));
+			x += 104;
 		}
+		Screens.getWidgets(screen).add(Button.builder(packetsLabel(), b -> {
+			PacketFeed.toggle();
+			b.setMessage(packetsLabel());
+		}).bounds(x, bottom, 100, 20).build());
+		bottom += 24;
 		int labelY = bottom + 2;
 		ScreenEvents.afterExtract(screen).register((s, g, mouseX, mouseY, partialTick) ->
 			g.centeredText(client.font, MimicBuild.label(), s.width / 2, labelY, 0xFFAAAAAA));
+	}
+
+	private static Component packetsLabel() {
+		return Component.literal(PacketFeed.enabled() ? "Packets: on" : "Packets: off");
 	}
 
 	private static Button serverModsButton(Minecraft client, Screen screen, int x, int y) {

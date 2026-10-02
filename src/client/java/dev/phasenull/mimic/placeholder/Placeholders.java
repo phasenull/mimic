@@ -66,6 +66,22 @@ public final class Placeholders {
 		return registry.containsKey(id) && !isPlaceholder(registry, id);
 	}
 
+	/** Shown for block-state ids past everything the client has (the server's blocks have more states). */
+	public static final Identifier UNKNOWN_BLOCK = Identifier.fromNamespaceAndPath("mimic", "unknown_block");
+	private static volatile BlockState unknownState;
+
+	/** Registers {@link #UNKNOWN_BLOCK} once; called before the server's block ids are applied. */
+	public static void ensureUnknownBlock() {
+		if (unknownState == null && ensure(BuiltInRegistries.BLOCK, UNKNOWN_BLOCK)) {
+			unknownState = BuiltInRegistries.BLOCK.getValue(UNKNOWN_BLOCK).defaultBlockState();
+		}
+	}
+
+	/** The state for an unknown block-state id, or null before any server registered placeholders. */
+	public static BlockState unknownState() {
+		return unknownState;
+	}
+
 	/** Registers a placeholder for {@code id} in {@code registry} if it's one Mimic can stand in for. */
 	public static boolean ensure(Registry<?> registry, Identifier id) {
 		if (registry.containsKey(id)) {

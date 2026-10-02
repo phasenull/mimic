@@ -163,6 +163,7 @@ public final class ConnectionDebug {
 
 	/** A free-form event line in the connection log, e.g. note("QUERY", details). */
 	public static void note(String kind, String detail) {
+		PacketFeed.note(kind, detail);
 		event(kind, detail);
 	}
 
@@ -181,6 +182,7 @@ public final class ConnectionDebug {
 
 	private static void packet(String dir, Packet<?> packet) {
 		String name = name(packet);
+		PacketFeed.packet(dir.startsWith("IN"), packet, name);
 		last = dir.trim() + " " + name;
 		lastAt = System.currentTimeMillis();
 		if (phase.equals("play") && ++playLogged > PLAY_PACKETS_TO_LOG) {

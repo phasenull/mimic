@@ -8,6 +8,7 @@
 		"ServerEntryMixin",
 		"EntityRenderDispatcherMixin",
 		"PackRepositoryMixin",
+		"IdMapperMixin",
 		"ClientCommonPacketListenerImplAccessor",
 		"ConnectionMixin",
 		"PacketDecoderMixin",

@@ -32,6 +32,7 @@ public abstract class ClientRegistrySyncHandlerMixin {
 		int droppedEntries = 0;
 		int placeholders = 0;
 		JoinSession.kind("Fabric");
+		Placeholders.ensureUnknownBlock();
 		for (Map.Entry<Identifier, Object2IntMap<Identifier>> registry : payload.registryMap().entrySet()) {
 			Registry<?> local = BuiltInRegistries.REGISTRY.getValue(registry.getKey());
 			String registryId = registry.getKey().toString();

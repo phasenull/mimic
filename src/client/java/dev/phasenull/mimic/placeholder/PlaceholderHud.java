@@ -46,7 +46,10 @@ public final class PlaceholderHud {
 		if (hit instanceof BlockHitResult blockHit && hit.getType() == HitResult.Type.BLOCK) {
 			BlockPos pos = blockHit.getBlockPos();
 			BlockState state = client.level.getBlockState(pos);
-			if (state.getBlock() instanceof PlaceholderBlock block) {
+			if (state == Placeholders.unknownState()) {
+				lines.add("Unknown block");
+				lines.add("the server's block-state id is past every block this client has; import the mods' jars for exact shapes");
+			} else if (state.getBlock() instanceof PlaceholderBlock block) {
 				int index = block.getStateDefinition().getPossibleStates().indexOf(state);
 				lines.add("Server-only block: " + BuiltInRegistries.BLOCK.getKey(block));
 				lines.add("state " + (index + 1) + "/" + block.guess().states() + ", " + block.guess().source());

@@ -3,7 +3,8 @@
 	"package": "dev.phasenull.mimic.mixin.via",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
-		"MappingDataBaseMixin"
+		"MappingDataBaseMixin",
+		"EntityRewriterMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0
