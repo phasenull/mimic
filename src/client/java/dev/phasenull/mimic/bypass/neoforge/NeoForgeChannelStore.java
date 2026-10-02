@@ -106,10 +106,21 @@ public final class NeoForgeChannelStore {
 		return created || !Objects.equals(oldVersion, channel.version) || !Objects.equals(oldFlow, channel.flow);
 	}
 
-	/** Sets {@code version} on every channel of {@code namespace} whose version is still a guess. */
+	/**
+	 * Sets {@code version} on every channel of {@code namespace} whose version is still a guess. Skipped once
+	 * the server confirmed two different versions in that namespace (add-ons register channels under another
+	 * mod's namespace, e.g. TFMG's "1" next to Create's "6.0.10"): guessing would just flip the guesses back
+	 * and forth on every reconnect.
+	 */
 	public static synchronized boolean guessNamespaceVersion(String server, String namespace, String version) {
+		List<Channel> list = servers.getOrDefault(server, List.of());
+		long confirmedVersions = list.stream().filter(c -> c.versionConfirmed && c.id.startsWith(namespace + ":"))
+			.map(c -> c.version).distinct().count();
+		if (confirmedVersions > 1) {
+			return false;
+		}
 		boolean changed = false;
-		for (Channel c : servers.getOrDefault(server, List.of())) {
+		for (Channel c : list) {
 			if (!c.versionConfirmed && c.id.startsWith(namespace + ":") && !version.equals(c.version)) {
 				c.version = version;
 				changed = true;
