@@ -139,6 +139,11 @@ public final class ConnectionDebug {
 		}
 	}
 
+	/** A free-form event line in the connection log, e.g. note("QUERY", details). */
+	public static void note(String kind, String detail) {
+		event(kind, detail);
+	}
+
 	public static void error(Throwable t) {
 		event("ERROR", t.toString());
 	}

@@ -1,5 +1,6 @@
 package dev.phasenull.mimic.mixin;
 
+import dev.phasenull.mimic.bypass.LoginQueryAnswers;
 import dev.phasenull.mimic.bypass.RegistryStandIns;
 import dev.phasenull.mimic.bypass.neoforge.NeoForgeBypass;
 import dev.phasenull.mimic.debug.ConnectionDebug;
@@ -30,6 +31,7 @@ public abstract class ConnectScreenMixin {
 			boolean quickPlay, TransferState transfer, CallbackInfo ci) {
 		ConnectionDebug.begin(address.toString());
 		RegistryStandIns.reset();
+		LoginQueryAnswers.reload();
 		NeoForgeBypass.onConnecting(address, data);
 	}
 }
