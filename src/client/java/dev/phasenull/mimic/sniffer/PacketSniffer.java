@@ -1,6 +1,7 @@
 package dev.phasenull.mimic.sniffer;
 
 import dev.phasenull.mimic.MimicClient;
+import dev.phasenull.mimic.cache.ModCache;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.network.protocol.common.custom.DiscardedPayload;
@@ -31,6 +32,13 @@ public final class PacketSniffer {
 		int count = UNKNOWN_CHANNELS.computeIfAbsent(id.toString(), k -> new AtomicInteger()).incrementAndGet();
 		if (count == 1) {
 			MimicClient.LOGGER.info("New {} channel: {}", unknown ? "unhandled" : "mod", id);
+		}
+		if (count == 1 && unknown) {
+			ModCache cache = ModCache.get();
+			if (!cache.seen(id.getNamespace(), ModCache.UNKNOWN_VERSION)) {
+				cache.mod(id.getNamespace(), ModCache.UNKNOWN_VERSION);
+				cache.save();
+			}
 		}
 		write(Instant.now() + " " + (unknown ? "UNHANDLED " : "HANDLED   ") + id + " (#" + count + ")\n");
 	}

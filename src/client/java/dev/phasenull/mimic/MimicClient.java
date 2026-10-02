@@ -1,5 +1,6 @@
 package dev.phasenull.mimic;
 
+import dev.phasenull.mimic.command.MimicCommand;
 import net.fabricmc.api.ClientModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +11,7 @@ public class MimicClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		MimicCommand.register();
 		LOGGER.info("Mimic loaded");
 	}
 }
