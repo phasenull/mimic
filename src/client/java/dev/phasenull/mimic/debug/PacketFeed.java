@@ -13,10 +13,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.Set;
 
 /**
  * In-game packet log at the bottom left (toggled from the pause menu): incoming and outgoing packets with
- * a short description, plus Mimic's skip notes. Repeats of the same line are folded into a counter.
+ * a short description, plus Mimic's skip notes. Movement, keep-alives and similar constant traffic are left
+ * out; repeats of the same line are folded into a counter.
  */
 public final class PacketFeed {
 	private static final int LINES = 18;
@@ -24,6 +26,16 @@ public final class PacketFeed {
 	private static final int IN_COLOR = 0xFF77FF77;
 	private static final int OUT_COLOR = 0xFF77BBFF;
 	private static final int NOTE_COLOR = 0xFFFF7777;
+
+	/** Constant background traffic (movement, keep-alives, time, particles, sounds) that would bury the rest. */
+	private static final Set<String> IGNORED = Set.of(
+		"move_entity_pos", "move_entity_pos_rot", "move_entity_rot", "rotate_head", "set_entity_motion",
+		"entity_position_sync", "teleport_entity", "move_minecart_along_track", "set_entity_data",
+		"move_player_pos", "move_player_rot", "move_player_pos_rot", "move_player_status_only", "player_input",
+		"player_loaded", "client_tick_end", "keep_alive", "ping", "pong", "ping_request", "pong_response",
+		"set_time", "level_particles", "sound", "sound_entity", "animate", "swing", "update_attributes",
+		"chunk_batch_start", "chunk_batch_finished", "chunk_batch_received", "light_update", "block_destruction",
+		"player_info_update", "set_health", "set_experience", "debug_sample", "ticking_state", "ticking_step");
 
 	private record Line(String text, int color, int count, long at) {}
 
@@ -48,7 +60,7 @@ public final class PacketFeed {
 	}
 
 	static void packet(boolean incoming, Packet<?> packet, String name) {
-		if (!enabled) {
+		if (!enabled || IGNORED.contains(packet.type().id().getPath())) {
 			return;
 		}
 		add((incoming ? "IN  " : "OUT ") + name + describe(packet), incoming ? IN_COLOR : OUT_COLOR);
