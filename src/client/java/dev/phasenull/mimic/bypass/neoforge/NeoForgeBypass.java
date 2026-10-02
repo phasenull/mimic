@@ -80,6 +80,15 @@ public final class NeoForgeBypass {
 		new Claim(FEATURE_FLAGS_ACK, FLOW_SERVERBOUND),
 		SPLIT);
 
+	/**
+	 * NeoForge's own channels that the server sends unasked: all optional, so a failure report never names
+	 * them, but sending on one the client didn't claim throws on the server. During login that throw is the
+	 * "Invalid player data" kick (e.g. data map sync right after the held-slot packet).
+	 */
+	private static final List<String> BUILTIN_CONFIGURATION_EXTRA = List.of("config_file");
+	private static final List<String> BUILTIN_PLAY = List.of("advanced_add_entity", "advanced_open_screen",
+		"auxiliary_light_data", "registry_data_map_sync", "advanced_container_set_data", "custom_time_packet", "sync_attachments");
+
 	private record Claim(CustomPacketPayload.Type<RawPayload> type, int flow) {}
 
 	private static volatile String server = "unknown";
@@ -144,16 +153,18 @@ public final class NeoForgeBypass {
 		FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
 		buf.writeVarInt(2);
 		buf.writeVarInt(PROTOCOL_CONFIGURATION);
-		buf.writeVarInt(BUILTIN.size() + learned.size());
+		buf.writeVarInt(BUILTIN.size() + BUILTIN_CONFIGURATION_EXTRA.size() + learned.size());
 		for (Claim claim : BUILTIN) {
 			writeComponent(buf, claim.type().id().toString(), "1", claim.flow());
 		}
+		BUILTIN_CONFIGURATION_EXTRA.forEach(path -> writeComponent(buf, NS + ":" + path, "1", FLOW_CLIENTBOUND));
 		learned.forEach(c -> writeComponent(buf, c.id, c.version, flowOrdinal(c.flow)));
 		// Learned channels go in both protocols: failure reports don't say which one they belong to,
 		// and an optional claim the server doesn't have is simply dropped.
 		buf.writeVarInt(PROTOCOL_PLAY);
-		buf.writeVarInt(1 + learned.size());
+		buf.writeVarInt(1 + BUILTIN_PLAY.size() + learned.size());
 		writeComponent(buf, SPLIT.type().id().toString(), "1", SPLIT.flow());
+		BUILTIN_PLAY.forEach(path -> writeComponent(buf, NS + ":" + path, "1", FLOW_CLIENTBOUND));
 		learned.forEach(c -> writeComponent(buf, c.id, c.version, flowOrdinal(c.flow)));
 		reply(ctx, QUERY, bytes(buf));
 	}
