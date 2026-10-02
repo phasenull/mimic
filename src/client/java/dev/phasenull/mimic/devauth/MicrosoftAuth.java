@@ -17,17 +17,17 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /** Microsoft device-code login -> Xbox Live -> XSTS -> Minecraft services. */
-final class MicrosoftAuth {
+public final class MicrosoftAuth {
 	private static final String MS_BASE = "https://login.microsoftonline.com/consumers/oauth2/v2.0/";
 	private static final String SCOPE = "XboxLive.signin offline_access";
 	private static final Gson GSON = new Gson();
 	private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
 
-	record MsTokens(String accessToken, String refreshToken) {}
+	public record MsTokens(String accessToken, String refreshToken) {}
 
-	record McSession(String accessToken, long expiresAtMillis, String uuid, String name) {}
+	public record McSession(String accessToken, long expiresAtMillis, String uuid, String name) {}
 
-	record DeviceCode(String deviceCode, String userCode, String verificationUri, String message, int intervalSeconds, int expiresInSeconds) {}
+	public record DeviceCode(String deviceCode, String userCode, String verificationUri, String message, int intervalSeconds, int expiresInSeconds) {}
 
 	private final String clientId;
 
@@ -46,11 +46,14 @@ final class MicrosoftAuth {
 			res.get("expires_in").getAsInt());
 	}
 
-	MsTokens pollDeviceCode(DeviceCode code) throws IOException {
+	MsTokens pollDeviceCode(DeviceCode code, java.util.function.BooleanSupplier cancelled) throws IOException {
 		long deadline = System.currentTimeMillis() + code.expiresInSeconds() * 1000L;
 		int interval = code.intervalSeconds();
 		while (System.currentTimeMillis() < deadline) {
 			sleep(interval);
+			if (cancelled.getAsBoolean()) {
+				throw new IOException("Sign-in cancelled");
+			}
 			JsonObject res = postForm(MS_BASE + "token", Map.of(
 				"grant_type", "urn:ietf:params:oauth:grant-type:device_code",
 				"client_id", clientId,

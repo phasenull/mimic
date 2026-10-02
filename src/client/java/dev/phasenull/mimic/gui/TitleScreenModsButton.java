@@ -1,5 +1,6 @@
 package dev.phasenull.mimic.gui;
 
+import dev.phasenull.mimic.devauth.DevAuth;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.minecraft.client.Minecraft;
@@ -42,6 +43,12 @@ public final class TitleScreenModsButton {
 			widgets.add(mods.bounds(realms.getX() + half + SPACING, realms.getY(), full - half - SPACING, realms.getHeight()).build());
 		} else {
 			widgets.add(mods.bounds(SPACING, SPACING, 60, 20).build());
+		}
+
+		if (DevAuth.isDev()) {
+			int w = 120;
+			widgets.add(Button.builder(Component.translatable("mimic.auth.button", client.getUser().getName()),
+				b -> client.gui.setScreen(new AuthScreen(screen))).bounds(screen.width - w - SPACING, SPACING, w, 20).build());
 		}
 	}
 }

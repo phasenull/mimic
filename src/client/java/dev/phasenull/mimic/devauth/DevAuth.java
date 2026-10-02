@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 
 /**
  * Real Microsoft login for the dev client only. Enabled when a Microsoft app client ID is set via
@@ -35,28 +37,19 @@ public final class DevAuth {
 		String name;
 	}
 
+	static volatile boolean microsoftSession;
+
 	private DevAuth() {}
 
-	public static String[] apply(String[] args) {
-		if (!FabricLoader.getInstance().isDevelopmentEnvironment()) {
-			return args;
-		}
-		String clientId = clientId();
-		if (clientId == null) {
-			LOGGER.info("Dev auth off (set MIMIC_DEVAUTH_CLIENT_ID to sign in with Microsoft)");
-			return args;
-		}
-		try {
-			MicrosoftAuth.McSession session = login(clientId);
-			LOGGER.info("Signed in as {}", session.name());
-			return withSession(args, session);
-		} catch (Exception e) {
-			LOGGER.error("Microsoft sign-in failed, starting offline: {}", e.getMessage());
-			return args;
-		}
+	public static boolean isMicrosoftSession() {
+		return microsoftSession;
 	}
 
-	private static String clientId() {
+	public static boolean isDev() {
+		return FabricLoader.getInstance().isDevelopmentEnvironment();
+	}
+
+	public static String clientId() {
 		String id = System.getProperty("mimic.devauth.clientId");
 		if (id == null || id.isBlank()) {
 			id = System.getenv("MIMIC_DEVAUTH_CLIENT_ID");
@@ -64,9 +57,41 @@ public final class DevAuth {
 		return id == null || id.isBlank() ? null : id.trim();
 	}
 
-	private static MicrosoftAuth.McSession login(String clientId) throws IOException {
+	/** Launch-time hook: swaps the dev account's session args for a Microsoft session when configured. */
+	public static String[] apply(String[] args) {
+		if (!isDev()) {
+			return args;
+		}
+		if (clientId() == null) {
+			LOGGER.info("Dev auth off (set MIMIC_DEVAUTH_CLIENT_ID to sign in with Microsoft)");
+			return args;
+		}
+		try {
+			MicrosoftAuth.McSession session = signIn(false, DevAuth::announce, LOGGER::info, () -> false);
+			LOGGER.info("Signed in as {}", session.name());
+			microsoftSession = true;
+			return withSession(args, session);
+		} catch (Exception e) {
+			LOGGER.error("Microsoft sign-in failed, starting offline: {}", e.getMessage());
+			return args;
+		}
+	}
+
+	/**
+	 * Blocking. Reuses the saved login unless {@code forceNew}; otherwise runs the device-code flow,
+	 * handing the code to {@code onCode}.
+	 */
+	public static MicrosoftAuth.McSession signIn(boolean forceNew, Consumer<MicrosoftAuth.DeviceCode> onCode,
+			Consumer<String> status, BooleanSupplier cancelled) throws IOException {
+		if (!isDev()) {
+			throw new IOException("Dev auth only works in development sessions");
+		}
+		String clientId = clientId();
+		if (clientId == null) {
+			throw new IOException("Set MIMIC_DEVAUTH_CLIENT_ID to sign in with Microsoft");
+		}
 		MicrosoftAuth auth = new MicrosoftAuth(clientId);
-		Cache cache = readCache();
+		Cache cache = forceNew ? null : readCache();
 		if (cache != null && !clientId.equals(cache.clientId)) {
 			cache = null;
 		}
@@ -78,18 +103,20 @@ public final class DevAuth {
 		MicrosoftAuth.MsTokens ms = null;
 		if (cache != null && cache.refreshToken != null) {
 			try {
+				status.accept("Refreshing saved login");
 				ms = auth.refresh(cache.refreshToken);
 			} catch (IOException e) {
 				LOGGER.warn("Saved Microsoft login expired, signing in again");
 			}
 		}
 		if (ms == null) {
+			status.accept("Requesting sign-in code");
 			MicrosoftAuth.DeviceCode code = auth.requestDeviceCode();
-			announce(code);
-			ms = auth.pollDeviceCode(code);
+			onCode.accept(code);
+			ms = auth.pollDeviceCode(code, cancelled);
 		}
 
-		MicrosoftAuth.McSession session = auth.minecraftLogin(ms.accessToken(), LOGGER::info);
+		MicrosoftAuth.McSession session = auth.minecraftLogin(ms.accessToken(), status);
 		Cache fresh = new Cache();
 		fresh.clientId = clientId;
 		fresh.refreshToken = ms.refreshToken();
@@ -99,6 +126,18 @@ public final class DevAuth {
 		fresh.name = session.name();
 		writeCache(fresh);
 		return session;
+	}
+
+	public static boolean hasSavedLogin() {
+		return Files.exists(CACHE);
+	}
+
+	public static void forgetSavedLogin() {
+		try {
+			Files.deleteIfExists(CACHE);
+		} catch (IOException e) {
+			LOGGER.warn("Could not delete saved login: {}", e.getMessage());
+		}
 	}
 
 	private static void announce(MicrosoftAuth.DeviceCode code) {
