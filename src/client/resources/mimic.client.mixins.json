@@ -11,6 +11,7 @@
 		"SynchedEntityDataMixin",
 		"RegistryLoadTaskMixin",
 		"ClientRegistrySyncHandlerMixin",
+		"MappedRegistryHolesMixin",
 		"PendingRegistrationMixin",
 		"MainMixin",
 		"MinecraftAccessor"
