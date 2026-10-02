@@ -1,5 +1,14 @@
 package dev.phasenull.mimic.gui;
 
+import dev.phasenull.mimic.MimicClient;
+import dev.phasenull.mimic.assets.AssetPacks;
+import dev.phasenull.mimic.assets.FilePicker;
+import dev.phasenull.mimic.debug.JoinStatus;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.Identifier;
+import java.io.IOException;
+import java.nio.file.Path;
+
 import dev.phasenull.mimic.debug.JoinSession;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -42,16 +51,33 @@ public final class ServerModsScreen {
 		return parts.isEmpty() ? "seen" : String.join(" | ", parts);
 	}
 
+	private static final Set<String> PLACEHOLDER_REGISTRIES = Set.of("minecraft:block", "minecraft:item", "minecraft:entity_type");
+
 	private static Screen modScreen(Screen grandParent, String name, JoinSession.Mod mod) {
 		Screen back = create(grandParent);
+		Screen[] self = new Screen[1];
 		List<TextListScreen.Row> rows = new ArrayList<>();
+		boolean imported = AssetPacks.importedNamespaces().contains(name);
+		rows.add(TextListScreen.Row.action("Import this mod's jar (assets only)...",
+			imported ? "Imported. Import again to replace it. Or drag the jar onto this window."
+				: "Textures, models and block states from the jar. Its code is never loaded. Or drag the jar here.",
+			() -> FilePicker.pick("Mod jar", "jar", jar -> importJar(jar, () -> modScreen(grandParent, name, mod)))));
 		if (!mod.standIns.isEmpty()) {
 			rows.add(TextListScreen.Row.header("Stand-ins (" + mod.standIns.size() + "): replaced by a vanilla value"));
 			mod.standIns.forEach(s -> rows.add(TextListScreen.Row.text(s)));
 		}
 		mod.unknownEntries.forEach((registry, ids) -> {
-			rows.add(TextListScreen.Row.header("Server-only " + registry + " (" + ids.size() + ")"));
-			ids.forEach(id -> rows.add(TextListScreen.Row.text(id)));
+			boolean editable = PLACEHOLDER_REGISTRIES.contains(registry);
+			rows.add(TextListScreen.Row.header("Server-only " + registry + " (" + ids.size() + ")" + (editable ? ": click one to set its texture" : "")));
+			ids.forEach(id -> {
+				Identifier identifier = Identifier.tryParse(id);
+				if (editable && identifier != null) {
+					String detail = AssetPacks.hasUserTexture(registry, identifier) ? "your texture" : null;
+					rows.add(TextListScreen.Row.link(id, detail, () -> new PlaceholderEntryScreen(self[0], registry, identifier)));
+				} else {
+					rows.add(TextListScreen.Row.text(id));
+				}
+			});
 		});
 		if (!mod.knownEntries.isEmpty()) {
 			rows.add(TextListScreen.Row.header("Shared registries (this client has them too)"));
@@ -61,7 +87,24 @@ public final class ServerModsScreen {
 			rows.add(TextListScreen.Row.header("Network channels (" + mod.channels.size() + ")"));
 			addAll(rows, mod.channels);
 		}
-		return new TextListScreen(back, Component.literal(name), rows);
+		TextListScreen screen = new TextListScreen(back, Component.literal(name), rows);
+		self[0] = screen.onFilesDropped(files -> files.stream()
+			.filter(p -> p.getFileName().toString().toLowerCase().endsWith(".jar")).findFirst()
+			.ifPresent(jar -> importJar(jar, () -> modScreen(grandParent, name, mod))));
+		return screen;
+	}
+
+	private static void importJar(Path jar, java.util.function.Supplier<Screen> reopen) {
+		Minecraft client = Minecraft.getInstance();
+		try {
+			Set<String> namespaces = AssetPacks.importJar(jar);
+			JoinStatus.info("[Assets] Imported {} ({}). Block shapes from it apply after a restart.", jar.getFileName(), namespaces);
+			client.reloadResourcePacks();
+		} catch (IOException e) {
+			MimicClient.LOGGER.warn("Could not import {}", jar, e);
+			JoinStatus.info("[Assets] Could not import {}: {}", jar.getFileName(), e.getMessage());
+		}
+		client.gui.setScreen(reopen.get());
 	}
 
 	private static Screen skippedScreen(Screen grandParent) {

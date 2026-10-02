@@ -94,7 +94,7 @@ public final class Placeholders {
 	}
 
 	private static void registerBlock(Identifier id) {
-		StateGuess guess = StateGuess.fromName(id.getPath());
+		StateGuess guess = StateGuess.of(id);
 		ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, id);
 		PlaceholderBlock.PENDING.set(guess.properties());
 		try {
