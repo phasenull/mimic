@@ -15,17 +15,18 @@
 	"mimic.auth.kind.microsoft": "Microsoft",
 	"mimic.auth.kind.offline": "Offline",
 	"mimic.auth.sign_in": "Sign in with Microsoft",
-	"mimic.auth.switch": "Use another Microsoft account",
 	"mimic.auth.use_token": "Use provided token",
 	"mimic.auth.offline_name": "Offline name",
 	"mimic.auth.offline": "Go offline",
 	"mimic.auth.forget": "Forget saved login",
-	"mimic.auth.copy_code": "Copy code",
-	"mimic.auth.open_link": "Open link",
-	"mimic.auth.go_to": "Go to %s and enter:",
+	"mimic.auth.open_link": "Open login page",
 	"mimic.auth.working": "Signing in...",
 	"mimic.auth.signed_in": "Signed in as %s",
 	"mimic.auth.offline_now": "Now offline as %s",
 	"mimic.auth.forgotten": "Saved login removed",
-	"mimic.auth.no_client_id": "Set MIMIC_DEVAUTH_CLIENT_ID to enable Microsoft sign-in"
+	"mimic.auth.use_saved": "Use saved Microsoft login",
+	"mimic.auth.finish": "Finish sign-in",
+	"mimic.auth.paste_hint": "Paste the URL here",
+	"mimic.auth.paste_step1": "Sign in on the page that opened.",
+	"mimic.auth.paste_step2": "Then copy the blank page's URL and paste it:"
 }

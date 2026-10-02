@@ -11,26 +11,22 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 /**
- * Real Microsoft login for the dev client only. Enabled when a Microsoft app client ID is set via
- * the MIMIC_DEVAUTH_CLIENT_ID env var or the mimic.devauth.clientId system property.
+ * Real Microsoft login for the dev client only. First sign-in happens in the in-game Account screen
+ * (browser sign-in, then paste the redirect URL); later launches reuse the saved login.
  */
 public final class DevAuth {
 	private static final Logger LOGGER = LoggerFactory.getLogger("mimic/devauth");
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	// Kept in the user's home, never in the project, so tokens can't end up in git.
 	private static final Path CACHE = Path.of(System.getProperty("user.home"), ".mimic", "devauth.json");
-	private static final Path TOKEN_FILE = Path.of(System.getProperty("user.home"), ".mimic", "token.txt");
 	private static final long EXPIRY_MARGIN_MS = 5 * 60 * 1000L;
 	private static final Set<String> SESSION_ARGS = Set.of("--username", "--uuid", "--accessToken", "--xuid", "--userType");
 
 	private static class Cache {
-		String clientId;
 		String refreshToken;
 		String mcAccessToken;
 		long mcExpiresAt;
@@ -42,118 +38,65 @@ public final class DevAuth {
 
 	private DevAuth() {}
 
-	public static boolean isMicrosoftSession() {
-		return microsoftSession;
-	}
-
 	public static boolean isDev() {
 		return FabricLoader.getInstance().isDevelopmentEnvironment();
 	}
 
-	/** A Minecraft access token the user supplied directly (env var, system property, or ~/.mimic/token.txt). */
-	public static String providedToken() {
-		String token = System.getProperty("mimic.devauth.token");
-		if (token == null || token.isBlank()) {
-			token = System.getenv("MIMIC_DEVAUTH_TOKEN");
-		}
-		if ((token == null || token.isBlank()) && Files.exists(TOKEN_FILE)) {
-			try {
-				token = Files.readString(TOKEN_FILE).trim();
-			} catch (IOException e) {
-				LOGGER.warn("Could not read {}: {}", TOKEN_FILE, e.getMessage());
-			}
-		}
-		return token == null || token.isBlank() ? null : token.trim();
+	public static boolean isMicrosoftSession() {
+		return microsoftSession;
 	}
 
-	/** Validates a user-supplied Minecraft token and returns its session. Not cached (can't be refreshed). */
-	public static MicrosoftAuth.McSession signInWithToken(String mcToken) throws IOException {
-		if (!isDev()) {
-			throw new IOException("Dev auth only works in development sessions");
-		}
-		return MicrosoftAuth.sessionFromMinecraftToken(mcToken, 0L);
-	}
-
-	public static String clientId() {
-		String id = System.getProperty("mimic.devauth.clientId");
-		if (id == null || id.isBlank()) {
-			id = System.getenv("MIMIC_DEVAUTH_CLIENT_ID");
-		}
-		return id == null || id.isBlank() ? null : id.trim();
-	}
-
-	/** Launch-time hook: swaps the dev account's session args for a Microsoft session when configured. */
+	/** Launch-time hook: swaps the dev account's session args for the saved Microsoft login, if any. */
 	public static String[] apply(String[] args) {
 		if (!isDev()) {
 			return args;
 		}
-		String token = providedToken();
-		if (token == null && clientId() == null) {
-			LOGGER.info("Dev auth off (provide MIMIC_DEVAUTH_TOKEN, or MIMIC_DEVAUTH_CLIENT_ID to sign in with Microsoft)");
+		if (!hasSavedLogin()) {
+			LOGGER.info("No saved Microsoft login; use the Account button on the title screen to sign in");
 			return args;
 		}
 		try {
-			MicrosoftAuth.McSession session = token != null
-				? signInWithToken(token)
-				: signIn(false, DevAuth::announce, LOGGER::info, () -> false);
+			MicrosoftAuth.McSession session = signInSaved(LOGGER::info);
 			LOGGER.info("Signed in as {}", session.name());
 			microsoftSession = true;
 			return withSession(args, session);
 		} catch (Exception e) {
-			LOGGER.error("Dev sign-in failed, starting offline: {}", e.getMessage());
+			LOGGER.error("Microsoft sign-in failed, starting offline: {}", e.getMessage());
 			return args;
 		}
 	}
 
-	/**
-	 * Blocking. Reuses the saved login unless {@code forceNew}; otherwise runs the device-code flow,
-	 * handing the code to {@code onCode}.
-	 */
-	public static MicrosoftAuth.McSession signIn(boolean forceNew, Consumer<MicrosoftAuth.DeviceCode> onCode,
-			Consumer<String> status, BooleanSupplier cancelled) throws IOException {
-		if (!isDev()) {
-			throw new IOException("Dev auth only works in development sessions");
-		}
-		String clientId = clientId();
-		if (clientId == null) {
-			throw new IOException("Set MIMIC_DEVAUTH_CLIENT_ID to sign in with Microsoft");
-		}
-		MicrosoftAuth auth = new MicrosoftAuth(clientId);
-		Cache cache = forceNew ? null : readCache();
-		if (cache != null && !clientId.equals(cache.clientId)) {
-			cache = null;
-		}
+	/** URL to open in the browser. {@code chooseAccount} forces Microsoft's account picker. */
+	public static String authorizationUrl(boolean chooseAccount) {
+		String url = auth().authorizationUrl();
+		return chooseAccount ? url + "&prompt=select_account" : url;
+	}
 
-		if (cache != null && cache.mcAccessToken != null && cache.mcExpiresAt - EXPIRY_MARGIN_MS > System.currentTimeMillis()) {
+	/** Blocking. Finishes a browser sign-in from the URL the browser was redirected to. */
+	public static MicrosoftAuth.McSession finishSignIn(String redirectUrl, Consumer<String> status) throws IOException {
+		requireDev();
+		status.accept("Exchanging sign-in code");
+		MicrosoftAuth auth = auth();
+		MicrosoftAuth.MsTokens ms = auth.exchangeAuthorizationCode(redirectUrl.trim());
+		return loginAndSave(auth, ms, status);
+	}
+
+	/** Blocking. Uses the saved Minecraft token, or refreshes it through the saved Microsoft login. */
+	public static MicrosoftAuth.McSession signInSaved(Consumer<String> status) throws IOException {
+		requireDev();
+		Cache cache = readCache();
+		if (cache == null) {
+			throw new IOException("No saved login");
+		}
+		if (cache.mcAccessToken != null && cache.mcExpiresAt - EXPIRY_MARGIN_MS > System.currentTimeMillis()) {
 			return new MicrosoftAuth.McSession(cache.mcAccessToken, cache.mcExpiresAt, cache.uuid, cache.name);
 		}
-
-		MicrosoftAuth.MsTokens ms = null;
-		if (cache != null && cache.refreshToken != null) {
-			try {
-				status.accept("Refreshing saved login");
-				ms = auth.refresh(cache.refreshToken);
-			} catch (IOException e) {
-				LOGGER.warn("Saved Microsoft login expired, signing in again");
-			}
+		if (cache.refreshToken == null) {
+			throw new IOException("Saved login expired; sign in again");
 		}
-		if (ms == null) {
-			status.accept("Requesting sign-in code");
-			MicrosoftAuth.DeviceCode code = auth.requestDeviceCode();
-			onCode.accept(code);
-			ms = auth.pollDeviceCode(code, cancelled);
-		}
-
-		MicrosoftAuth.McSession session = auth.minecraftLogin(ms.accessToken(), status);
-		Cache fresh = new Cache();
-		fresh.clientId = clientId;
-		fresh.refreshToken = ms.refreshToken();
-		fresh.mcAccessToken = session.accessToken();
-		fresh.mcExpiresAt = session.expiresAtMillis();
-		fresh.uuid = session.uuid();
-		fresh.name = session.name();
-		writeCache(fresh);
-		return session;
+		status.accept("Refreshing saved login");
+		MicrosoftAuth auth = auth();
+		return loginAndSave(auth, auth.refresh(cache.refreshToken), status);
 	}
 
 	public static boolean hasSavedLogin() {
@@ -168,19 +111,26 @@ public final class DevAuth {
 		}
 	}
 
-	private static void announce(MicrosoftAuth.DeviceCode code) {
-		String line = "=".repeat(64);
-		LOGGER.warn(line);
-		LOGGER.warn("MICROSOFT SIGN-IN: open {} and enter code {}", code.verificationUri(), code.userCode());
-		LOGGER.warn(line);
-		String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-		if (os.contains("win")) {
-			try {
-				new ProcessBuilder("rundll32", "url.dll,FileProtocolHandler", code.verificationUri()).start();
-			} catch (IOException ignored) {
-				// The code is in the log either way.
-			}
+	private static MicrosoftAuth auth() {
+		return new MicrosoftAuth(null);
+	}
+
+	private static void requireDev() throws IOException {
+		if (!isDev()) {
+			throw new IOException("Dev auth only works in development sessions");
 		}
+	}
+
+	private static MicrosoftAuth.McSession loginAndSave(MicrosoftAuth auth, MicrosoftAuth.MsTokens ms, Consumer<String> status) throws IOException {
+		MicrosoftAuth.McSession session = auth.minecraftLogin(ms.accessToken(), status);
+		Cache fresh = new Cache();
+		fresh.refreshToken = ms.refreshToken();
+		fresh.mcAccessToken = session.accessToken();
+		fresh.mcExpiresAt = session.expiresAtMillis();
+		fresh.uuid = session.uuid();
+		fresh.name = session.name();
+		writeCache(fresh);
+		return session;
 	}
 
 	private static String[] withSession(String[] args, MicrosoftAuth.McSession session) {

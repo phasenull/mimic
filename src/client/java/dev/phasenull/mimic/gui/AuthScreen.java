@@ -15,31 +15,32 @@ import net.minecraft.util.CommonColors;
 
 import java.net.URI;
 
-/** Dev-only account switcher: Microsoft sign-in (device code) or an offline name. */
+/** Dev-only account switcher: Microsoft browser sign-in, saved login, or an offline name. */
 public class AuthScreen extends Screen {
 	private static final int W = 200;
 	private static final int ROW = 24;
 	private static final int ERROR_COLOR = 0xFFFF5555;
-	private static final int CODE_COLOR = 0xFFFFFF55;
+
+	private enum Mode { MENU, PASTE, WORKING }
 
 	private final Screen parent;
 	private final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this);
 
-	private volatile boolean busy;
-	private volatile boolean cancelled;
-	private volatile MicrosoftAuth.DeviceCode deviceCode;
+	private volatile Mode mode = Mode.MENU;
 	private volatile Component status = Component.empty();
 	private volatile boolean statusIsError;
+	private String loginUrl;
 
-	private EditBox offlineName;
+	private Button useSaved;
 	private Button signIn;
-	private Button switchAccount;
-	private Button useToken;
+	private EditBox offlineName;
 	private Button useOffline;
 	private Button forget;
-	private Button copyCode;
-	private Button openLink;
-	private Button cancel;
+
+	private EditBox redirectUrl;
+	private Button finish;
+	private Button reopen;
+	private Button back;
 
 	public AuthScreen(Screen parent) {
 		super(Component.translatable("mimic.auth.title"));
@@ -52,33 +53,24 @@ public class AuthScreen extends Screen {
 		layout.addToFooter(Button.builder(CommonComponents.GUI_DONE, b -> onClose()).width(W).build());
 		layout.visitWidgets(w -> addRenderableWidget(w));
 
-		boolean msAvailable = DevAuth.clientId() != null;
-		signIn = addRenderableWidget(Button.builder(Component.translatable("mimic.auth.sign_in"), b -> startSignIn(false)).width(W).build());
-		switchAccount = addRenderableWidget(Button.builder(Component.translatable("mimic.auth.switch"), b -> startSignIn(true)).width(W).build());
-		useToken = addRenderableWidget(Button.builder(Component.translatable("mimic.auth.use_token"), b -> useProvidedToken()).width(W).build());
+		useSaved = addRenderableWidget(Button.builder(Component.translatable("mimic.auth.use_saved"), b -> runSaved()).width(W).build());
+		signIn = addRenderableWidget(Button.builder(Component.translatable("mimic.auth.sign_in"), b -> startBrowserSignIn()).width(W).build());
 		offlineName = addRenderableWidget(new EditBox(font, 0, 0, W - 84, 20, Component.translatable("mimic.auth.offline_name")));
 		offlineName.setMaxLength(16);
 		offlineName.setValue(DevAuth.isMicrosoftSession() ? "Player" : minecraft.getUser().getName());
 		useOffline = addRenderableWidget(Button.builder(Component.translatable("mimic.auth.offline"), b -> goOffline()).width(80).build());
 		forget = addRenderableWidget(Button.builder(Component.translatable("mimic.auth.forget"), b -> forgetLogin()).width(W).build());
 
-		copyCode = addRenderableWidget(Button.builder(Component.translatable("mimic.auth.copy_code"), b -> {
-			MicrosoftAuth.DeviceCode code = deviceCode;
-			if (code != null) {
-				minecraft.keyboardHandler.setClipboard(code.userCode());
-			}
-		}).width(W / 2 - 2).build());
-		openLink = addRenderableWidget(Button.builder(Component.translatable("mimic.auth.open_link"), b -> {
-			MicrosoftAuth.DeviceCode code = deviceCode;
-			if (code != null) {
-				Blaze3D.openUri(URI.create(code.verificationUri()));
-			}
-		}).width(W / 2 - 2).build());
-		cancel = addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, b -> cancelled = true).width(W).build());
+		redirectUrl = addRenderableWidget(new EditBox(font, 0, 0, W, 20, Component.translatable("mimic.auth.paste_hint")));
+		redirectUrl.setMaxLength(8192);
+		redirectUrl.setHint(Component.translatable("mimic.auth.paste_hint"));
+		finish = addRenderableWidget(Button.builder(Component.translatable("mimic.auth.finish"), b -> runFinish()).width(W / 2 - 2).build());
+		reopen = addRenderableWidget(Button.builder(Component.translatable("mimic.auth.open_link"), b -> openLogin()).width(W / 2 - 2).build());
+		back = addRenderableWidget(Button.builder(CommonComponents.GUI_BACK, b -> {
+			mode = Mode.MENU;
+			setStatus(Component.empty(), false);
+		}).width(W).build());
 
-		if (!msAvailable) {
-			setStatus(Component.translatable("mimic.auth.no_client_id"), true);
-		}
 		repositionElements();
 	}
 
@@ -87,77 +79,74 @@ public class AuthScreen extends Screen {
 		layout.arrangeElements();
 		int x = (width - W) / 2;
 		int y = layout.getHeaderHeight() + 34;
-		signIn.setPosition(x, y);
-		switchAccount.setPosition(x, y + ROW);
-		useToken.setPosition(x, y + ROW * 2);
-		offlineName.setPosition(x, y + ROW * 3);
-		useOffline.setPosition(x + W - 80, y + ROW * 3);
-		forget.setPosition(x, y + ROW * 4);
+		useSaved.setPosition(x, y);
+		signIn.setPosition(x, y + ROW);
+		offlineName.setPosition(x, y + ROW * 2);
+		useOffline.setPosition(x + W - 80, y + ROW * 2);
+		forget.setPosition(x, y + ROW * 3);
 
-		copyCode.setPosition(x, y + ROW * 2);
-		openLink.setPosition(x + W / 2 + 2, y + ROW * 2);
-		cancel.setPosition(x, y + ROW * 3);
+		redirectUrl.setPosition(x, y + ROW);
+		finish.setPosition(x, y + ROW * 2);
+		reopen.setPosition(x + W / 2 + 2, y + ROW * 2);
+		back.setPosition(x, y + ROW * 3);
 	}
 
 	@Override
 	public void tick() {
-		boolean msAvailable = DevAuth.clientId() != null;
-		boolean showCode = busy && deviceCode != null;
-		signIn.visible = switchAccount.visible = useToken.visible = offlineName.visible = useOffline.visible = forget.visible = !busy;
-		signIn.active = switchAccount.active = msAvailable;
-		useToken.active = DevAuth.providedToken() != null;
-		forget.active = DevAuth.hasSavedLogin();
-		copyCode.visible = openLink.visible = showCode;
-		cancel.visible = busy;
+		Mode m = mode;
+		boolean saved = DevAuth.hasSavedLogin();
+		useSaved.visible = signIn.visible = offlineName.visible = useOffline.visible = forget.visible = m == Mode.MENU;
+		useSaved.active = forget.active = saved;
 		useOffline.active = !offlineName.getValue().isBlank();
+		redirectUrl.visible = finish.visible = reopen.visible = back.visible = m == Mode.PASTE;
+		finish.active = redirectUrl.getValue().contains("code=") || redirectUrl.getValue().contains("error=");
 	}
 
-	private void startSignIn(boolean forceNew) {
-		busy = true;
-		cancelled = false;
-		deviceCode = null;
+	private void startBrowserSignIn() {
+		loginUrl = DevAuth.authorizationUrl(true);
+		redirectUrl.setValue("");
+		mode = Mode.PASTE;
+		setStatus(Component.empty(), false);
+		setFocused(redirectUrl);
+		openLogin();
+	}
+
+	private void openLogin() {
+		if (loginUrl != null) {
+			Blaze3D.openUri(URI.create(loginUrl));
+		}
+	}
+
+	private void runFinish() {
+		String url = redirectUrl.getValue();
+		runInBackground(() -> DevAuth.finishSignIn(url, this::setStatusText));
+	}
+
+	private void runSaved() {
+		runInBackground(() -> DevAuth.signInSaved(this::setStatusText));
+	}
+
+	private interface SessionTask {
+		MicrosoftAuth.McSession run() throws Exception;
+	}
+
+	private void runInBackground(SessionTask task) {
+		Mode previous = mode;
+		mode = Mode.WORKING;
 		setStatus(Component.translatable("mimic.auth.working"), false);
 		Thread thread = new Thread(() -> {
 			try {
-				MicrosoftAuth.McSession session = DevAuth.signIn(forceNew,
-					code -> {
-						deviceCode = code;
-						minecraft.execute(() -> Blaze3D.openUri(URI.create(code.verificationUri())));
-					},
-					msg -> setStatus(Component.literal(msg), false),
-					() -> cancelled);
+				MicrosoftAuth.McSession session = task.run();
 				minecraft.execute(() -> {
 					SessionSwitcher.useMicrosoft(minecraft, session);
 					setStatus(Component.translatable("mimic.auth.signed_in", session.name()), false);
-					busy = false;
-					deviceCode = null;
+					mode = Mode.MENU;
 				});
 			} catch (Exception e) {
 				setStatus(Component.literal(e.getMessage() == null ? e.toString() : e.getMessage()), true);
-				busy = false;
-				deviceCode = null;
+				mode = previous;
 			}
 		}, "Mimic dev sign-in");
-		thread.setDaemon(true);
-		thread.start();
-	}
-
-	private void useProvidedToken() {
-		busy = true;
-		setStatus(Component.translatable("mimic.auth.working"), false);
-		Thread thread = new Thread(() -> {
-			try {
-				MicrosoftAuth.McSession session = DevAuth.signInWithToken(DevAuth.providedToken());
-				minecraft.execute(() -> {
-					SessionSwitcher.useMicrosoft(minecraft, session);
-					setStatus(Component.translatable("mimic.auth.signed_in", session.name()), false);
-					busy = false;
-				});
-			} catch (Exception e) {
-				setStatus(Component.literal(e.getMessage() == null ? e.toString() : e.getMessage()), true);
-				busy = false;
-			}
-		}, "Mimic dev token login");
 		thread.setDaemon(true);
 		thread.start();
 	}
@@ -171,6 +160,10 @@ public class AuthScreen extends Screen {
 	private void forgetLogin() {
 		DevAuth.forgetSavedLogin();
 		setStatus(Component.translatable("mimic.auth.forgotten"), false);
+	}
+
+	private void setStatusText(String message) {
+		setStatus(Component.literal(message), false);
 	}
 
 	private void setStatus(Component message, boolean error) {
@@ -187,17 +180,15 @@ public class AuthScreen extends Screen {
 		g.centeredText(font, Component.translatable("mimic.auth.current", minecraft.getUser().getName(), kind), cx, y, CommonColors.WHITE);
 		g.centeredText(font, status, cx, y + font.lineHeight + 4, statusIsError ? ERROR_COLOR : CommonColors.GRAY);
 
-		MicrosoftAuth.DeviceCode code = deviceCode;
-		if (busy && code != null) {
+		if (mode == Mode.PASTE) {
 			int top = layout.getHeaderHeight() + 34;
-			g.centeredText(font, Component.translatable("mimic.auth.go_to", code.verificationUri()), cx, top + 2, CommonColors.WHITE);
-			g.centeredText(font, Component.literal(code.userCode()).withStyle(s -> s.withBold(true)), cx, top + ROW + 2, CODE_COLOR);
+			g.centeredText(font, Component.translatable("mimic.auth.paste_step1"), cx, top, CommonColors.LIGHT_GRAY);
+			g.centeredText(font, Component.translatable("mimic.auth.paste_step2"), cx, top + font.lineHeight + 2, CommonColors.LIGHT_GRAY);
 		}
 	}
 
 	@Override
 	public void onClose() {
-		cancelled = true;
 		minecraft.gui.setScreen(parent);
 	}
 }
