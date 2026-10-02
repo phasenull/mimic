@@ -1,5 +1,6 @@
 package dev.phasenull.mimic.debug;
 
+import dev.phasenull.mimic.bypass.neoforge.NeoForgeBypass;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.ConnectScreen;
@@ -39,6 +40,10 @@ public final class ConnectionOverlay {
 					g.centeredText(font, line, s.width / 2, y, (FEED_ALPHA[i] << 24) | FEED_COLOR);
 					y += font.lineHeight + 2;
 				}
+
+				int learned = NeoForgeBypass.learnedChannels();
+				String stats = JoinSession.kind() + " | " + JoinSession.summary() + (learned > 0 ? " | " + learned + " channels learned" : "");
+				g.text(font, font.plainSubstrByWidth(stats, s.width - 8), 4, s.height - 2 * font.lineHeight - 6, CommonColors.LIGHT_GRAY);
 
 				String status = font.plainSubstrByWidth(ConnectionDebug.status(), s.width - 8);
 				g.text(font, status, 4, s.height - font.lineHeight - 4, CommonColors.GRAY);

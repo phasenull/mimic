@@ -111,6 +111,11 @@ public final class NeoForgeBypass {
 		});
 	}
 
+	/** Channels saved for the server being joined (shown on the connecting screen). */
+	public static int learnedChannels() {
+		return NeoForgeChannelStore.channels(server).size();
+	}
+
 	/** Called when a connection starts, before the server can be asked anything. */
 	public static void onConnecting(ServerAddress address, ServerData data) {
 		server = (address.getHost() + ":" + address.getPort()).toLowerCase(Locale.ROOT);

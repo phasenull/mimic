@@ -99,6 +99,18 @@ public final class JoinSession {
 		return serverData;
 	}
 
+	/** e.g. "12 mods | 340 server-only entries | 5 stand-ins | 2 skipped" (empty parts left out). */
+	public static String summary() {
+		int unknown = MODS.values().stream().mapToInt(Mod::unknownCount).sum();
+		int standIns = MODS.values().stream().mapToInt(m -> m.standIns.size()).sum();
+		int skipped = SKIPPED.values().stream().mapToInt(AtomicInteger::get).sum();
+		StringBuilder sb = new StringBuilder(MODS.size() + " mods");
+		if (unknown > 0) sb.append(" | ").append(unknown).append(" server-only entries");
+		if (standIns > 0) sb.append(" | ").append(standIns).append(" stand-ins");
+		if (skipped > 0) sb.append(" | ").append(skipped).append(" skipped");
+		return sb.toString();
+	}
+
 	public static boolean hasData() {
 		return !MODS.isEmpty() || !SKIPPED.isEmpty();
 	}
