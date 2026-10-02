@@ -1,0 +1,11 @@
+{
+	"required": true,
+	"package": "dev.phasenull.mimic.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"ClientCommonPacketListenerImplMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
