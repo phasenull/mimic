@@ -128,8 +128,11 @@ public final class NeoForgeBypass {
 		learnedThisAttempt = false;
 		JoinSession.kind("NeoForge");
 
-		List<NeoForgeChannelStore.Channel> learned = NeoForgeChannelStore.channels(server);
-		JoinStatus.info("[NeoForge] Server {} is running NeoForge; claiming {} built-in + {} learned channels", server, BUILTIN.size(), learned.size());
+		List<NeoForgeChannelStore.Channel> learned = new ArrayList<>(NeoForgeChannelStore.channels(server));
+		List<NeoForgeChannelStore.Channel> borrowed = NeoForgeChannelStore.borrowed(server);
+		JoinStatus.info("[NeoForge] Server {} is running NeoForge; claiming {} built-in + {} learned + {} from other servers",
+			server, BUILTIN.size(), learned.size(), borrowed.size());
+		learned.addAll(borrowed);
 
 		FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
 		buf.writeVarInt(2);

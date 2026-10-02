@@ -15,10 +15,17 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 
-/** Mod network channels each NeoForge server requires, learned from its negotiation failures. */
+/**
+ * Mod network channels each NeoForge server requires, learned from its negotiation failures, plus channels
+ * seen arriving on any server (under {@link #SEEN}). A server is offered its own channels and, as optional
+ * claims, every channel known from elsewhere: NeoForge only sends a mod packet on a claimed channel, and
+ * optional channels never show up in a failure report.
+ */
 public final class NeoForgeChannelStore {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("mimic").resolve("neoforge_channels.json");
+	/** Pseudo-server holding channels seen arriving on any connection. */
+	public static final String SEEN = "*seen";
 	private static Map<String, List<Channel>> servers = load();
 
 	public static final class Channel {
@@ -40,6 +47,46 @@ public final class NeoForgeChannelStore {
 
 	public static synchronized List<Channel> channels(String server) {
 		return List.copyOf(servers.getOrDefault(server, List.of()));
+	}
+
+	/**
+	 * Channels learned for other servers (or seen anywhere) that {@code server} has no entry for, limited to
+	 * mods the server is known to run (namespaces of its own channels), so the claim stays a sane size.
+	 */
+	public static synchronized List<Channel> borrowed(String server) {
+		java.util.Set<String> own = new java.util.HashSet<>();
+		java.util.Set<String> mods = new java.util.HashSet<>();
+		servers.getOrDefault(server, List.of()).forEach(c -> {
+			own.add(c.id);
+			mods.add(namespace(c.id));
+		});
+		Map<String, Channel> out = new TreeMap<>();
+		servers.forEach((other, list) -> {
+			if (other.equals(server)) {
+				return;
+			}
+			for (Channel c : list) {
+				if (!own.contains(c.id) && mods.contains(namespace(c.id))) {
+					// A version some server confirmed beats a guess.
+					out.merge(c.id, c, (a, b) -> !a.versionConfirmed && b.versionConfirmed ? b : a);
+				}
+			}
+		});
+		return List.copyOf(out.values());
+	}
+
+	private static String namespace(String id) {
+		return id.substring(0, Math.max(0, id.indexOf(':')));
+	}
+
+	/** Records a mod channel that arrived from a server; true if it was new. */
+	public static synchronized boolean seen(String id) {
+		for (List<Channel> list : servers.values()) {
+			if (list.stream().anyMatch(c -> c.id.equals(id))) {
+				return false;
+			}
+		}
+		return update(SEEN, id, c -> c.flow = "CLIENTBOUND");
 	}
 
 	/** Applies a change to one channel, creating it with defaults first. Returns true if anything changed. */

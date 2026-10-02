@@ -1,6 +1,7 @@
 package dev.phasenull.mimic.sniffer;
 
 import dev.phasenull.mimic.MimicClient;
+import dev.phasenull.mimic.bypass.neoforge.NeoForgeChannelStore;
 import dev.phasenull.mimic.cache.ModCache;
 import dev.phasenull.mimic.debug.JoinSession;
 import net.fabricmc.loader.api.FabricLoader;
@@ -40,6 +41,10 @@ public final class PacketSniffer {
 			if (!cache.seen(id.getNamespace(), ModCache.UNKNOWN_VERSION)) {
 				cache.mod(id.getNamespace(), ModCache.UNKNOWN_VERSION);
 				cache.save();
+			}
+			// Offered to NeoForge servers later, so they may send it (see NeoForgeChannelStore).
+			if (!id.getNamespace().equals("minecraft") && NeoForgeChannelStore.seen(id.toString())) {
+				NeoForgeChannelStore.save();
 			}
 		}
 		write(Instant.now() + " " + (unknown ? "UNHANDLED " : "HANDLED   ") + id + " (#" + count + ")\n");
