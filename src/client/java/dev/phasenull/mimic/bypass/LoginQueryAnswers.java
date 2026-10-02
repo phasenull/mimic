@@ -8,12 +8,8 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientLoginNetworking;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
-import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.multiplayer.ServerData;
-import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.Identifier;
 
@@ -150,8 +146,7 @@ public final class LoginQueryAnswers {
 				append(line);
 				retried = true;
 				JoinStatus.info("[Login] Learned '{}', reconnecting", line);
-				client.execute(() -> ConnectScreen.startConnecting(new JoinMultiplayerScreen(new TitleScreen()), client,
-					ServerAddress.parseString(server.ip), server, false, null));
+				DelayedReconnect.schedule(client, server);
 				return;
 			}
 		}

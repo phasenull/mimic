@@ -1,6 +1,7 @@
 package dev.phasenull.mimic.bypass.neoforge;
 
 import dev.phasenull.mimic.MimicClient;
+import dev.phasenull.mimic.bypass.DelayedReconnect;
 import dev.phasenull.mimic.bypass.RawPayload;
 import dev.phasenull.mimic.cache.ModCache;
 import dev.phasenull.mimic.debug.JoinStatus;
@@ -11,10 +12,7 @@ import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
-import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.nbt.CompoundTag;
@@ -230,8 +228,7 @@ public final class NeoForgeBypass {
 			return;
 		}
 		JoinStatus.info("[NeoForge] Learned new channels, reconnecting to {} (try {}/{})", server, attempt, MAX_AUTO_RECONNECTS);
-		client.execute(() -> ConnectScreen.startConnecting(new JoinMultiplayerScreen(new TitleScreen()), client,
-			ServerAddress.parseString(data.ip), data, false, null));
+		DelayedReconnect.schedule(client, data);
 	}
 
 	private static void onRegistry(byte[] data) {
