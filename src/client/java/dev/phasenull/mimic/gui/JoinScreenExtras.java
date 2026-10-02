@@ -18,6 +18,7 @@ import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -56,9 +57,13 @@ public final class JoinScreenExtras {
 
 	private static void onDisconnectScreen(Minecraft client, Screen screen, int width, int height) {
 		List<net.minecraft.client.gui.components.AbstractWidget> widgets = Screens.getWidgets(screen);
-		if (JoinSession.hasData()) {
-			widgets.add(serverModsButton(client, screen, 4, height - 48));
-		}
+		// Vanilla's "Open Report Directory" opens run/debug; Mimic's reports already include those files.
+		widgets.forEach(w -> {
+			if (w.getMessage().getContents() instanceof TranslatableContents t && t.getKey().equals("gui.open_report_dir")) {
+				w.visible = false;
+			}
+		});
+		// Centered, under the screen's own buttons (the stats line goes below it).
 		Button retry = Button.builder(retryLabel(), b -> {
 			if (RetryLoop.active()) {
 				RetryLoop.stop();
@@ -66,11 +71,15 @@ public final class JoinScreenExtras {
 				RetryLoop.start(client, JoinSession.serverData());
 			}
 			b.setMessage(retryLabel());
-		}).bounds(4, height - 72, 160, 20).build();
+		}).bounds(width / 2 - 100, ConnectionOverlay.feedTop(screen), 200, 20).build();
 		retry.active = JoinSession.serverData() != null;
 		widgets.add(retry);
+		// Bottom-left column, above "Copy logs".
 		widgets.add(Button.builder(Component.translatable("mimic.report.open_folder"), b -> openReportsFolder())
-			.bounds(width - 164, height - 24, 160, 20).build());
+			.bounds(4, height - 48, 100, 20).build());
+		if (JoinSession.hasData()) {
+			widgets.add(serverModsButton(client, screen, 4, height - 72));
+		}
 
 		// AFTER_INIT also fires on resize; only a newly opened disconnect screen counts as a failed try.
 		if (lastDisconnectScreen.get() != screen) {

@@ -37,5 +37,5 @@
 	"mimic.server_mods.button": "Server mods",
 	"mimic.retry.start": "Retry until connected (%s)",
 	"mimic.retry.stop": "Stop retrying (%s/%s)",
-	"mimic.report.open_folder": "Open reports folder"
+	"mimic.report.open_folder": "Reports folder"
 }

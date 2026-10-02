@@ -28,7 +28,7 @@ public final class ConnectionOverlay {
 	public static int feedTop(Screen screen) {
 		int bottom = -1;
 		for (AbstractWidget w : Screens.getWidgets(screen)) {
-			if (w.visible && w instanceof Button && w.getY() < screen.height - 60) {
+			if (w.visible && w instanceof Button && w.getX() < screen.width / 2 && w.getX() + w.getWidth() > screen.width / 2) {
 				bottom = Math.max(bottom, w.getY() + w.getHeight());
 			}
 		}
