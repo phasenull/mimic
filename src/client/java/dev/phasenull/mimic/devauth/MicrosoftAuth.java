@@ -99,12 +99,19 @@ public final class MicrosoftAuth {
 			GSON.toJson(Map.of("identityToken", "XBL3.0 x=" + uhs + ";" + xstsToken)));
 		String mcToken = mc.get("access_token").getAsString();
 		long expiresAt = System.currentTimeMillis() + mc.get("expires_in").getAsLong() * 1000L;
+		return sessionFromMinecraftToken(mcToken, expiresAt);
+	}
 
+	/** Builds a session from a Minecraft services access token the caller already holds. */
+	static McSession sessionFromMinecraftToken(String mcToken, long expiresAt) throws IOException {
 		HttpRequest profileReq = HttpRequest.newBuilder(URI.create("https://api.minecraftservices.com/minecraft/profile"))
 			.header("Authorization", "Bearer " + mcToken).GET().build();
 		HttpResponse<String> profileRes = send(profileReq);
+		if (profileRes.statusCode() == 401) {
+			throw new IOException("Token rejected (expired or not a Minecraft access token)");
+		}
 		if (profileRes.statusCode() == 404) {
-			throw new IOException("This Microsoft account does not own Minecraft Java Edition");
+			throw new IOException("This account does not own Minecraft Java Edition");
 		}
 		JsonObject profile = parse(profileRes, true);
 		return new McSession(mcToken, expiresAt, dashed(profile.get("id").getAsString()), profile.get("name").getAsString());

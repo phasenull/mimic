@@ -25,6 +25,7 @@ public final class DevAuth {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	// Kept in the user's home, never in the project, so tokens can't end up in git.
 	private static final Path CACHE = Path.of(System.getProperty("user.home"), ".mimic", "devauth.json");
+	private static final Path TOKEN_FILE = Path.of(System.getProperty("user.home"), ".mimic", "token.txt");
 	private static final long EXPIRY_MARGIN_MS = 5 * 60 * 1000L;
 	private static final Set<String> SESSION_ARGS = Set.of("--username", "--uuid", "--accessToken", "--xuid", "--userType");
 
@@ -49,6 +50,30 @@ public final class DevAuth {
 		return FabricLoader.getInstance().isDevelopmentEnvironment();
 	}
 
+	/** A Minecraft access token the user supplied directly (env var, system property, or ~/.mimic/token.txt). */
+	public static String providedToken() {
+		String token = System.getProperty("mimic.devauth.token");
+		if (token == null || token.isBlank()) {
+			token = System.getenv("MIMIC_DEVAUTH_TOKEN");
+		}
+		if ((token == null || token.isBlank()) && Files.exists(TOKEN_FILE)) {
+			try {
+				token = Files.readString(TOKEN_FILE).trim();
+			} catch (IOException e) {
+				LOGGER.warn("Could not read {}: {}", TOKEN_FILE, e.getMessage());
+			}
+		}
+		return token == null || token.isBlank() ? null : token.trim();
+	}
+
+	/** Validates a user-supplied Minecraft token and returns its session. Not cached (can't be refreshed). */
+	public static MicrosoftAuth.McSession signInWithToken(String mcToken) throws IOException {
+		if (!isDev()) {
+			throw new IOException("Dev auth only works in development sessions");
+		}
+		return MicrosoftAuth.sessionFromMinecraftToken(mcToken, 0L);
+	}
+
 	public static String clientId() {
 		String id = System.getProperty("mimic.devauth.clientId");
 		if (id == null || id.isBlank()) {
@@ -62,17 +87,20 @@ public final class DevAuth {
 		if (!isDev()) {
 			return args;
 		}
-		if (clientId() == null) {
-			LOGGER.info("Dev auth off (set MIMIC_DEVAUTH_CLIENT_ID to sign in with Microsoft)");
+		String token = providedToken();
+		if (token == null && clientId() == null) {
+			LOGGER.info("Dev auth off (provide MIMIC_DEVAUTH_TOKEN, or MIMIC_DEVAUTH_CLIENT_ID to sign in with Microsoft)");
 			return args;
 		}
 		try {
-			MicrosoftAuth.McSession session = signIn(false, DevAuth::announce, LOGGER::info, () -> false);
+			MicrosoftAuth.McSession session = token != null
+				? signInWithToken(token)
+				: signIn(false, DevAuth::announce, LOGGER::info, () -> false);
 			LOGGER.info("Signed in as {}", session.name());
 			microsoftSession = true;
 			return withSession(args, session);
 		} catch (Exception e) {
-			LOGGER.error("Microsoft sign-in failed, starting offline: {}", e.getMessage());
+			LOGGER.error("Dev sign-in failed, starting offline: {}", e.getMessage());
 			return args;
 		}
 	}

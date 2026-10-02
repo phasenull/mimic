@@ -34,6 +34,7 @@ public class AuthScreen extends Screen {
 	private EditBox offlineName;
 	private Button signIn;
 	private Button switchAccount;
+	private Button useToken;
 	private Button useOffline;
 	private Button forget;
 	private Button copyCode;
@@ -54,6 +55,7 @@ public class AuthScreen extends Screen {
 		boolean msAvailable = DevAuth.clientId() != null;
 		signIn = addRenderableWidget(Button.builder(Component.translatable("mimic.auth.sign_in"), b -> startSignIn(false)).width(W).build());
 		switchAccount = addRenderableWidget(Button.builder(Component.translatable("mimic.auth.switch"), b -> startSignIn(true)).width(W).build());
+		useToken = addRenderableWidget(Button.builder(Component.translatable("mimic.auth.use_token"), b -> useProvidedToken()).width(W).build());
 		offlineName = addRenderableWidget(new EditBox(font, 0, 0, W - 84, 20, Component.translatable("mimic.auth.offline_name")));
 		offlineName.setMaxLength(16);
 		offlineName.setValue(DevAuth.isMicrosoftSession() ? "Player" : minecraft.getUser().getName());
@@ -87,9 +89,10 @@ public class AuthScreen extends Screen {
 		int y = layout.getHeaderHeight() + 34;
 		signIn.setPosition(x, y);
 		switchAccount.setPosition(x, y + ROW);
-		offlineName.setPosition(x, y + ROW * 2);
-		useOffline.setPosition(x + W - 80, y + ROW * 2);
-		forget.setPosition(x, y + ROW * 3);
+		useToken.setPosition(x, y + ROW * 2);
+		offlineName.setPosition(x, y + ROW * 3);
+		useOffline.setPosition(x + W - 80, y + ROW * 3);
+		forget.setPosition(x, y + ROW * 4);
 
 		copyCode.setPosition(x, y + ROW * 2);
 		openLink.setPosition(x + W / 2 + 2, y + ROW * 2);
@@ -100,8 +103,9 @@ public class AuthScreen extends Screen {
 	public void tick() {
 		boolean msAvailable = DevAuth.clientId() != null;
 		boolean showCode = busy && deviceCode != null;
-		signIn.visible = switchAccount.visible = offlineName.visible = useOffline.visible = forget.visible = !busy;
+		signIn.visible = switchAccount.visible = useToken.visible = offlineName.visible = useOffline.visible = forget.visible = !busy;
 		signIn.active = switchAccount.active = msAvailable;
+		useToken.active = DevAuth.providedToken() != null;
 		forget.active = DevAuth.hasSavedLogin();
 		copyCode.visible = openLink.visible = showCode;
 		cancel.visible = busy;
@@ -134,6 +138,26 @@ public class AuthScreen extends Screen {
 				deviceCode = null;
 			}
 		}, "Mimic dev sign-in");
+		thread.setDaemon(true);
+		thread.start();
+	}
+
+	private void useProvidedToken() {
+		busy = true;
+		setStatus(Component.translatable("mimic.auth.working"), false);
+		Thread thread = new Thread(() -> {
+			try {
+				MicrosoftAuth.McSession session = DevAuth.signInWithToken(DevAuth.providedToken());
+				minecraft.execute(() -> {
+					SessionSwitcher.useMicrosoft(minecraft, session);
+					setStatus(Component.translatable("mimic.auth.signed_in", session.name()), false);
+					busy = false;
+				});
+			} catch (Exception e) {
+				setStatus(Component.literal(e.getMessage() == null ? e.toString() : e.getMessage()), true);
+				busy = false;
+			}
+		}, "Mimic dev token login");
 		thread.setDaemon(true);
 		thread.start();
 	}

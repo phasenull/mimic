@@ -16,6 +16,7 @@
 	"mimic.auth.kind.offline": "Offline",
 	"mimic.auth.sign_in": "Sign in with Microsoft",
 	"mimic.auth.switch": "Use another Microsoft account",
+	"mimic.auth.use_token": "Use provided token",
 	"mimic.auth.offline_name": "Offline name",
 	"mimic.auth.offline": "Go offline",
 	"mimic.auth.forget": "Forget saved login",
