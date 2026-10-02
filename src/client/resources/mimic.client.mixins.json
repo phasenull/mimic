@@ -9,6 +9,7 @@
 		"ConnectScreenMixin",
 		"ClientboundUpdateTagsPacketMixin",
 		"RegistryLoadTaskMixin",
+		"PendingRegistrationMixin",
 		"MainMixin",
 		"MinecraftAccessor"
 	],

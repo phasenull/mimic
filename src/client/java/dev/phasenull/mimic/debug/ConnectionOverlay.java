@@ -10,8 +10,8 @@ import java.util.List;
 public final class ConnectionOverlay {
 	private static final int[] FEED_ALPHA = {0xFF, 0xB0, 0x70, 0x40};
 	private static final int FEED_COLOR = 0xFFFFFF;
-	// Below the vanilla "Joining world..." text and its Cancel button.
-	private static final int FEED_OFFSET_Y = 76;
+	// Vanilla draws the connect status at height / 2 - 50; the feed goes right below it.
+	private static final int FEED_OFFSET_Y = -50 + 16;
 
 	private ConnectionOverlay() {}
 

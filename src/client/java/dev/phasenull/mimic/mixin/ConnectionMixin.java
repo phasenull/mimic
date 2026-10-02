@@ -23,9 +23,6 @@ public abstract class ConnectionMixin {
 	@Shadow
 	public abstract PacketFlow getReceiving();
 
-	@Shadow
-	public abstract String getLoggableAddress(boolean logIps);
-
 	private boolean mimic$isClient() {
 		return getReceiving() == PacketFlow.CLIENTBOUND;
 	}
@@ -55,9 +52,6 @@ public abstract class ConnectionMixin {
 	private void mimic$outbound(ProtocolInfo<?> info, CallbackInfo ci) {
 		if (!mimic$isClient()) {
 			return;
-		}
-		if (info.id() == ConnectionProtocol.HANDSHAKING) {
-			ConnectionDebug.begin(getLoggableAddress(true));
 		}
 		ConnectionDebug.protocol("out", name(info.id()));
 	}

@@ -1,5 +1,6 @@
 package dev.phasenull.mimic.mixin;
 
+import dev.phasenull.mimic.bypass.RegistryStandIns;
 import dev.phasenull.mimic.bypass.neoforge.NeoForgeBypass;
 import dev.phasenull.mimic.debug.ConnectionDebug;
 import net.minecraft.network.chat.Component;
@@ -27,6 +28,8 @@ public abstract class ConnectScreenMixin {
 	@Inject(method = "startConnecting", at = @At("HEAD"))
 	private static void mimic$rememberServer(Screen parent, Minecraft minecraft, ServerAddress address, ServerData data,
 			boolean quickPlay, TransferState transfer, CallbackInfo ci) {
+		ConnectionDebug.begin(address.toString());
+		RegistryStandIns.reset();
 		NeoForgeBypass.onConnecting(address, data);
 	}
 }
