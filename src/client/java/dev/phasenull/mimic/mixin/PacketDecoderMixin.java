@@ -54,10 +54,15 @@ public abstract class PacketDecoderMixin {
 	 * On the joining connection, a play packet this client can't decode (it references server-only mod
 	 * content) is skipped instead of disconnecting. Each call holds exactly one framed packet, so skipping
 	 * its remaining bytes can't misalign the stream.
+	 * <p>
+	 * In configuration only "unknown packet id" is skipped: when a proxy switches servers it can still send
+	 * play packets after start_configuration, which then arrive once the client reads configuration.
 	 */
 	@WrapMethod(method = "decode")
 	private void mimic$skipUndecodable(ChannelHandlerContext ctx, ByteBuf in, List<Object> out, Operation<Void> original) {
-		if (protocolInfo.flow() != PacketFlow.CLIENTBOUND || protocolInfo.id() != ConnectionProtocol.PLAY
+		ConnectionProtocol protocol = protocolInfo.id();
+		if (protocolInfo.flow() != PacketFlow.CLIENTBOUND
+				|| (protocol != ConnectionProtocol.PLAY && protocol != ConnectionProtocol.CONFIGURATION)
 				|| !ConnectionDebug.isTrackedChannel(ctx.channel())) {
 			original.call(ctx, in, out);
 			return;
@@ -66,8 +71,11 @@ public abstract class PacketDecoderMixin {
 		try {
 			original.call(ctx, in, out);
 		} catch (Exception e) {
-			in.skipBytes(in.readableBytes());
 			String what = e.getMessage() == null ? e.toString() : e.getMessage();
+			if (protocol == ConnectionProtocol.CONFIGURATION && !what.contains("unknown packet id")) {
+				throw e;
+			}
+			in.skipBytes(in.readableBytes());
 			ConnectionDebug.note("SKIP", size + " bytes: " + what);
 			int quote = what.indexOf('\'');
 			int end = quote >= 0 ? what.indexOf('\'', quote + 1) : -1;
