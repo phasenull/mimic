@@ -1,6 +1,7 @@
 package dev.phasenull.mimic.mixin;
 
 import dev.phasenull.mimic.bypass.LoginQueryAnswers;
+import dev.phasenull.mimic.bypass.ReconfigLoopGuard;
 import dev.phasenull.mimic.bypass.RegistryStandIns;
 import dev.phasenull.mimic.bypass.neoforge.NeoForgeBypass;
 import dev.phasenull.mimic.debug.ConnectionDebug;
@@ -33,6 +34,7 @@ public abstract class ConnectScreenMixin {
 		ConnectionDebug.begin(address.toString());
 		JoinSession.begin(address.toString(), data);
 		RegistryStandIns.reset();
+		ReconfigLoopGuard.reset();
 		LoginQueryAnswers.reload(data);
 		NeoForgeBypass.onConnecting(address, data);
 	}
