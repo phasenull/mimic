@@ -2,6 +2,10 @@ package dev.phasenull.mimic.debug;
 
 import dev.phasenull.mimic.bypass.neoforge.NeoForgeBypass;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.screen.v1.Screens;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
@@ -15,10 +19,21 @@ import java.util.List;
 public final class ConnectionOverlay {
 	private static final int[] FEED_ALPHA = {0xFF, 0xB0, 0x70, 0x40};
 	private static final int FEED_COLOR = 0xFFFFFF;
-	// Vanilla draws the connect status at height / 2 - 50; the feed goes right below it.
+	// Fallback when no Cancel button is found: just below vanilla's status text (height / 2 - 50).
 	private static final int FEED_OFFSET_Y = -50 + 16;
 
 	private ConnectionOverlay() {}
+
+	/** Below the screen's Cancel button (the lowest visible vanilla button), so the feed never covers it. */
+	private static int feedTop(Screen screen) {
+		int bottom = -1;
+		for (AbstractWidget w : Screens.getWidgets(screen)) {
+			if (w.visible && w instanceof Button && w.getY() < screen.height - 60) {
+				bottom = Math.max(bottom, w.getY() + w.getHeight());
+			}
+		}
+		return bottom >= 0 ? bottom + 6 : screen.height / 2 + FEED_OFFSET_Y;
+	}
 
 	public static void register() {
 		ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
@@ -34,7 +49,7 @@ public final class ConnectionOverlay {
 				}
 				Font font = client.font;
 				List<String> feed = JoinStatus.recent();
-				int y = s.height / 2 + FEED_OFFSET_Y;
+				int y = feedTop(s);
 				for (int i = 0; i < feed.size() && i < FEED_ALPHA.length; i++) {
 					String line = font.plainSubstrByWidth(feed.get(i), s.width - 16);
 					g.centeredText(font, line, s.width / 2, y, (FEED_ALPHA[i] << 24) | FEED_COLOR);
