@@ -22,6 +22,8 @@ public final class ConnectionDebug {
 	private static final Path LOG = DIR.resolve("connection.log");
 	private static final Path PREV = DIR.resolve("connection.prev.log");
 	private static final int PLAY_PACKETS_TO_LOG = 200;
+	private static final Path BLOCK_FILE = DIR.resolve("block_outgoing.txt");
+	private static volatile java.util.Set<String> blockedOutgoing = java.util.Set.of();
 
 	private static BufferedWriter writer;
 	private static long start;
@@ -52,6 +54,7 @@ public final class ConnectionDebug {
 		}
 		start = System.currentTimeMillis();
 		playLogged = 0;
+		blockedOutgoing = readBlockList();
 		in = 0;
 		out = 0;
 		worldBytes = 0;
@@ -78,6 +81,45 @@ public final class ConnectionDebug {
 	public static void sent(Packet<?> packet) {
 		out++;
 		packet("OUT", packet);
+	}
+
+	/**
+	 * Debug switch: packets listed in config/mimic/block_outgoing.txt (one packet or payload id per
+	 * line, e.g. minecraft:chat_session_update or minecraft:register) are not sent. Read on each connect.
+	 */
+	public static boolean shouldBlock(Packet<?> packet) {
+		java.util.Set<String> blocked = blockedOutgoing;
+		if (blocked.isEmpty()) {
+			return false;
+		}
+		String id = packet.type().id().toString();
+		String payload = packet instanceof ServerboundCustomPayloadPacket p ? p.payload().type().id().toString() : null;
+		if (blocked.contains(id) || (payload != null && blocked.contains(payload))) {
+			write("BLK play " + name(packet));
+			return true;
+		}
+		return false;
+	}
+
+	private static java.util.Set<String> readBlockList() {
+		try {
+			if (!Files.exists(BLOCK_FILE)) {
+				return java.util.Set.of();
+			}
+			java.util.Set<String> ids = new java.util.HashSet<>();
+			for (String line : Files.readAllLines(BLOCK_FILE)) {
+				String id = line.trim();
+				if (!id.isEmpty() && !id.startsWith("#")) {
+					ids.add(id);
+				}
+			}
+			if (!ids.isEmpty()) {
+				JoinStatus.info("[Debug] Blocking outgoing: {}", String.join(", ", ids));
+			}
+			return ids;
+		} catch (IOException e) {
+			return java.util.Set.of();
+		}
 	}
 
 	public static void disconnected(String reason) {

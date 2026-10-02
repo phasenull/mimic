@@ -34,11 +34,16 @@ public abstract class ConnectionMixin {
 		}
 	}
 
-	@Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;Z)V", at = @At("HEAD"))
+	@Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;Z)V", at = @At("HEAD"), cancellable = true)
 	private void mimic$out(Packet<?> packet, ChannelFutureListener listener, boolean flush, CallbackInfo ci) {
-		if (mimic$isClient()) {
-			ConnectionDebug.sent(packet);
+		if (!mimic$isClient()) {
+			return;
 		}
+		if (ConnectionDebug.shouldBlock(packet)) {
+			ci.cancel();
+			return;
+		}
+		ConnectionDebug.sent(packet);
 	}
 
 	@Inject(method = "setupInboundProtocol", at = @At("HEAD"))
