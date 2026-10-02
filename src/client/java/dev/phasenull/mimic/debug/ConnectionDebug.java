@@ -38,6 +38,9 @@ public final class ConnectionDebug {
 	private static volatile int out;
 	private static volatile String last = "";
 	private static volatile long lastAt;
+	/** Last packet other than a keep-alive; a long gap during configuration means the server waits on us. */
+	private static volatile long lastMeaningfulAt;
+	private static volatile String lastMeaningful = "";
 	private static volatile String lastDisconnectReason;
 	private static volatile Object tracked;
 	private static volatile io.netty.channel.Channel trackedChannel;
@@ -68,6 +71,8 @@ public final class ConnectionDebug {
 		phase = "handshake";
 		tracked = null;
 		trackedChannel = null;
+		lastMeaningfulAt = 0;
+		lastMeaningful = "";
 		active = true;
 		JoinStatus.clear();
 		event("CONNECT", address);
@@ -84,6 +89,23 @@ public final class ConnectionDebug {
 	public static void received(Packet<?> packet) {
 		in++;
 		packet("IN ", packet);
+		if (!packet.type().id().getPath().equals("keep_alive")) {
+			lastMeaningfulAt = System.currentTimeMillis();
+			lastMeaningful = name(packet);
+		}
+	}
+
+	/** Seconds since the server last sent anything but keep-alives, while still configuring; 0 if not stalled. */
+	public static long stalledSeconds() {
+		if (!active || !phase.equals("configuration") || lastMeaningfulAt == 0) {
+			return 0;
+		}
+		long seconds = (System.currentTimeMillis() - lastMeaningfulAt) / 1000;
+		return seconds >= 5 ? seconds : 0;
+	}
+
+	public static String lastMeaningful() {
+		return lastMeaningful;
 	}
 
 	public static void sent(Packet<?> packet) {

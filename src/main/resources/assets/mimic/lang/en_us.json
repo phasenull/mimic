@@ -33,5 +33,8 @@
 	"mimic.report.copied": "Path copied!",
 	"mimic.report.failed": "Report failed",
 	"mimic.hotreload.done": "Hot reload: %s classes",
-	"mimic.hotreload.restart": "Mixin changed: restart needed"
+	"mimic.hotreload.restart": "Mixin changed: restart needed",
+	"mimic.server_mods.button": "Server mods",
+	"mimic.retry.start": "Retry until connected (%s)",
+	"mimic.retry.stop": "Stop retrying (%s/%s)"
 }

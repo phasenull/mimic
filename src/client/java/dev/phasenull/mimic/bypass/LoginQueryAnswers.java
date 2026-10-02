@@ -145,8 +145,7 @@ public final class LoginQueryAnswers {
 				}
 				append(line);
 				retried = true;
-				JoinStatus.info("[Login] Learned '{}', reconnecting", line);
-				DelayedReconnect.schedule(client, server);
+				DelayedReconnect.schedule(client, server, "Login: learned '" + line + "'");
 				return;
 			}
 		}

@@ -2,6 +2,7 @@ package dev.phasenull.mimic.sniffer;
 
 import dev.phasenull.mimic.MimicClient;
 import dev.phasenull.mimic.cache.ModCache;
+import dev.phasenull.mimic.debug.JoinSession;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.network.protocol.common.custom.DiscardedPayload;
@@ -29,6 +30,7 @@ public final class PacketSniffer {
 			return;
 		}
 
+		JoinSession.channel(id.toString());
 		int count = UNKNOWN_CHANNELS.computeIfAbsent(id.toString(), k -> new AtomicInteger()).incrementAndGet();
 		if (count == 1) {
 			MimicClient.LOGGER.info("New {} channel: {}", unknown ? "unhandled" : "mod", id);

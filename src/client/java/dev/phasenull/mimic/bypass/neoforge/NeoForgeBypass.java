@@ -4,7 +4,10 @@ import dev.phasenull.mimic.MimicClient;
 import dev.phasenull.mimic.bypass.DelayedReconnect;
 import dev.phasenull.mimic.bypass.RawPayload;
 import dev.phasenull.mimic.cache.ModCache;
+import dev.phasenull.mimic.debug.JoinSession;
 import dev.phasenull.mimic.debug.JoinStatus;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworking;
@@ -118,6 +121,7 @@ public final class NeoForgeBypass {
 
 	private static void onQuery(ClientConfigurationNetworking.Context ctx) {
 		learnedThisAttempt = false;
+		JoinSession.kind("NeoForge");
 
 		List<NeoForgeChannelStore.Channel> learned = NeoForgeChannelStore.channels(server);
 		JoinStatus.info("[NeoForge] Server {} is running NeoForge; claiming {} built-in + {} learned channels", server, BUILTIN.size(), learned.size());
@@ -227,13 +231,13 @@ public final class NeoForgeBypass {
 			reconnects.remove(server);
 			return;
 		}
-		JoinStatus.info("[NeoForge] Learned new channels, reconnecting to {} (try {}/{})", server, attempt, MAX_AUTO_RECONNECTS);
-		DelayedReconnect.schedule(client, data);
+		DelayedReconnect.schedule(client, data, "NeoForge: learned new channels (try " + attempt + "/" + MAX_AUTO_RECONNECTS + ")");
 	}
 
 	private static void onRegistry(byte[] data) {
 		FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.wrappedBuffer(data));
 		String registry = buf.readUtf();
+		recordSnapshot(registry, buf);
 		Path file = FabricLoader.getInstance().getConfigDir().resolve("mimic").resolve("neoforge_registries")
 			.resolve(server.replaceAll("[^a-z0-9._-]", "_")).resolve(registry.replaceAll("[^a-z0-9._-]", "_") + ".bin");
 		try {
@@ -243,6 +247,21 @@ public final class NeoForgeBypass {
 			MimicClient.LOGGER.warn("[NeoForge] Could not save registry snapshot {}", registry, e);
 		}
 		JoinStatus.info("[NeoForge] Received registry snapshot {} ({} bytes)", registry, data.length);
+	}
+
+	/** Snapshot body: map of network id -> entry id. Recorded per mod for the server mods screen. */
+	private static void recordSnapshot(String registry, FriendlyByteBuf buf) {
+		try {
+			var local = BuiltInRegistries.REGISTRY.getValue(Identifier.parse(registry));
+			int count = buf.readVarInt();
+			for (int i = 0; i < count; i++) {
+				buf.readVarInt();
+				Identifier id = Identifier.parse(buf.readUtf());
+				JoinSession.entry(registry, id.toString(), local != null && local.containsKey(id));
+			}
+		} catch (RuntimeException e) {
+			MimicClient.LOGGER.debug("[NeoForge] Could not read snapshot entries of {}", registry, e);
+		}
 	}
 
 	/** Claims to know every data map the server offers. */

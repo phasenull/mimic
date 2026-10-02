@@ -1,5 +1,6 @@
 package dev.phasenull.mimic.mixin;
 
+import dev.phasenull.mimic.debug.JoinSession;
 import dev.phasenull.mimic.debug.JoinStatus;
 import it.unimi.dsi.fastutil.objects.Object2IntLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -27,8 +28,11 @@ public abstract class ClientRegistrySyncHandlerMixin {
 		Map<Identifier, Object2IntMap<Identifier>> kept = new LinkedHashMap<>();
 		int droppedRegistries = 0;
 		int droppedEntries = 0;
+		JoinSession.kind("Fabric");
 		for (Map.Entry<Identifier, Object2IntMap<Identifier>> registry : payload.registryMap().entrySet()) {
 			Registry<?> local = BuiltInRegistries.REGISTRY.getValue(registry.getKey());
+			String registryId = registry.getKey().toString();
+			registry.getValue().keySet().forEach(id -> JoinSession.entry(registryId, id.toString(), local != null && local.containsKey(id)));
 			if (local == null) {
 				droppedRegistries++;
 				continue;

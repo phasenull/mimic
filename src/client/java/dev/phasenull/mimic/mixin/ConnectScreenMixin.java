@@ -4,6 +4,7 @@ import dev.phasenull.mimic.bypass.LoginQueryAnswers;
 import dev.phasenull.mimic.bypass.RegistryStandIns;
 import dev.phasenull.mimic.bypass.neoforge.NeoForgeBypass;
 import dev.phasenull.mimic.debug.ConnectionDebug;
+import dev.phasenull.mimic.debug.JoinSession;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import net.minecraft.client.Minecraft;
@@ -30,6 +31,7 @@ public abstract class ConnectScreenMixin {
 	private static void mimic$rememberServer(Screen parent, Minecraft minecraft, ServerAddress address, ServerData data,
 			boolean quickPlay, TransferState transfer, CallbackInfo ci) {
 		ConnectionDebug.begin(address.toString());
+		JoinSession.begin(address.toString(), data);
 		RegistryStandIns.reset();
 		LoginQueryAnswers.reload(data);
 		NeoForgeBypass.onConnecting(address, data);

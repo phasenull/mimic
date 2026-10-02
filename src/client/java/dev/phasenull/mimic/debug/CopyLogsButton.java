@@ -35,7 +35,7 @@ public final class CopyLogsButton {
 		});
 	}
 
-	private static Button button(Minecraft client, int x, int y) {
+	public static Button button(Minecraft client, int x, int y) {
 		return Button.builder(Component.translatable("mimic.report.copy"), b -> {
 			try {
 				Path report = JoinReport.write(ConnectionDebug.lastDisconnectReason());

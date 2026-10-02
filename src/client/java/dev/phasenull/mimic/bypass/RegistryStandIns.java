@@ -2,6 +2,7 @@ package dev.phasenull.mimic.bypass;
 
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Decoder;
+import dev.phasenull.mimic.debug.JoinSession;
 import dev.phasenull.mimic.debug.JoinStatus;
 import net.minecraft.core.RegistrationInfo;
 import net.minecraft.nbt.Tag;
@@ -77,6 +78,7 @@ public final class RegistryStandIns {
 					return p;
 				}
 				JoinStatus.info("[Registry] Stand-in for {} in {}", key.identifier(), registry);
+				JoinSession.standIn(registry, key.identifier().toString());
 				return CREATE.newInstance(key, Either.left(standIn), INFO.invoke(p));
 			} catch (ReflectiveOperationException e) {
 				return p;

@@ -3,6 +3,7 @@ package dev.phasenull.mimic.mixin;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import dev.phasenull.mimic.debug.ConnectionDebug;
+import dev.phasenull.mimic.debug.JoinSession;
 import dev.phasenull.mimic.debug.JoinStatus;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -68,6 +69,9 @@ public abstract class PacketDecoderMixin {
 			in.skipBytes(in.readableBytes());
 			String what = e.getMessage() == null ? e.toString() : e.getMessage();
 			ConnectionDebug.note("SKIP", size + " bytes: " + what);
+			int quote = what.indexOf('\'');
+			int end = quote >= 0 ? what.indexOf('\'', quote + 1) : -1;
+			JoinSession.skipped(end > quote ? what.substring(quote + 1, end) : what.substring(0, Math.min(what.length(), 80)));
 			if (++mimic$skipped <= MAX_SKIP_MESSAGES) {
 				JoinStatus.info("[Play] Skipped a packet this client can't read: {}", what);
 			}
