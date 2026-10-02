@@ -47,7 +47,7 @@ public final class NeoForgeBypass {
 	private static final int PROTOCOL_CONFIGURATION = 4;
 	private static final int FLOW_SERVERBOUND = 0;
 	private static final int FLOW_CLIENTBOUND = 1;
-	private static final int MAX_AUTO_RECONNECTS = 4;
+	private static final int MAX_AUTO_RECONNECTS = 10;
 
 	// Clientbound
 	private static final CustomPacketPayload.Type<RawPayload> QUERY = RawPayload.type(NS, "register");
