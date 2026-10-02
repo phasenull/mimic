@@ -5,6 +5,7 @@
 	"client": [
 		"ClientCommonPacketListenerImplMixin",
 		"ClientPacketListenerMixin",
+		"ServerEntryMixin",
 		"ClientCommonPacketListenerImplAccessor",
 		"ConnectionMixin",
 		"PacketDecoderMixin",
