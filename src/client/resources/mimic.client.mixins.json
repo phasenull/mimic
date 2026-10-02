@@ -8,6 +8,7 @@
 		"PacketDecoderMixin",
 		"ConnectScreenMixin",
 		"ClientboundUpdateTagsPacketMixin",
+		"SynchedEntityDataMixin",
 		"RegistryLoadTaskMixin",
 		"ClientRegistrySyncHandlerMixin",
 		"PendingRegistrationMixin",
