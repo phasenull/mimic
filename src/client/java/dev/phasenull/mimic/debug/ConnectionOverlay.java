@@ -2,6 +2,7 @@ package dev.phasenull.mimic.debug;
 
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
@@ -9,7 +10,7 @@ import net.minecraft.util.CommonColors;
 
 import java.util.List;
 
-/** While joining a server: a fading feed of recent Mimic messages mid-screen and the packet status at the bottom. */
+/** On the connecting screen: a fading feed of recent Mimic messages mid-screen and the packet status at the bottom. */
 public final class ConnectionOverlay {
 	private static final int[] FEED_ALPHA = {0xFF, 0xB0, 0x70, 0x40};
 	private static final int FEED_COLOR = 0xFFFFFF;
@@ -26,7 +27,8 @@ public final class ConnectionOverlay {
 		});
 		ScreenEvents.AFTER_INIT.register((client, screen, width, height) ->
 			ScreenEvents.afterExtract(screen).register((s, g, mouseX, mouseY, partialTick) -> {
-				if (!ConnectionDebug.active() || client.level != null) {
+				// Only on the vanilla connecting screen; servers may show their own screens (e.g. dialogs) meanwhile.
+				if (!ConnectionDebug.active() || client.level != null || !(s instanceof ConnectScreen)) {
 					return;
 				}
 				Font font = client.font;
