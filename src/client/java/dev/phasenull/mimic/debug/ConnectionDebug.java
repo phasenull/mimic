@@ -5,6 +5,8 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
+import net.minecraft.network.protocol.login.ClientboundCustomQueryPacket;
+import net.minecraft.network.protocol.login.ServerboundCustomQueryAnswerPacket;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -159,6 +161,12 @@ public final class ConnectionDebug {
 		}
 		if (packet instanceof ServerboundCustomPayloadPacket p) {
 			return id + " [" + p.payload().type().id() + "]";
+		}
+		if (packet instanceof ClientboundCustomQueryPacket q) {
+			return id + " [#" + q.transactionId() + " " + q.payload().id() + "]";
+		}
+		if (packet instanceof ServerboundCustomQueryAnswerPacket a) {
+			return id + " [#" + a.transactionId() + (a.payload() == null ? " no answer (not understood)" : " answered") + "]";
 		}
 		return id;
 	}
