@@ -19,6 +19,10 @@
 		{
 			"config": "mimic.client.mixins.json",
 			"environment": "client"
+		},
+		{
+			"config": "mimic.via.mixins.json",
+			"environment": "client"
 		}
 	],
 	"custom": {

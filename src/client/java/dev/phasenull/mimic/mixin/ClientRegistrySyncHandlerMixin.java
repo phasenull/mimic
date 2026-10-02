@@ -1,5 +1,6 @@
 package dev.phasenull.mimic.mixin;
 
+import dev.phasenull.mimic.bypass.ViaPassthrough;
 import dev.phasenull.mimic.placeholder.Placeholders;
 import dev.phasenull.mimic.debug.JoinSession;
 import dev.phasenull.mimic.debug.JoinStatus;
@@ -52,6 +53,7 @@ public abstract class ClientRegistrySyncHandlerMixin {
 				}
 			}
 			kept.put(registry.getKey(), entries);
+			ViaPassthrough.synced(registryId);
 		}
 		if (placeholders > 0) {
 			JoinStatus.info("[Fabric] Registry sync: {} server-only blocks/items/entities got placeholders", placeholders);

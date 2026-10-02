@@ -1,0 +1,11 @@
+{
+	"required": false,
+	"package": "dev.phasenull.mimic.mixin.via",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"MappingDataBaseMixin"
+	],
+	"injectors": {
+		"defaultRequire": 0
+	}
+}

@@ -1,5 +1,6 @@
 package dev.phasenull.mimic.gui;
 
+import dev.phasenull.mimic.MimicBuild;
 import dev.phasenull.mimic.bypass.RetryLoop;
 import dev.phasenull.mimic.debug.ConnectionDebug;
 import dev.phasenull.mimic.debug.ConnectionOverlay;
@@ -40,14 +41,26 @@ public final class JoinScreenExtras {
 
 	public static void register() {
 		ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
-			if (screen instanceof PauseScreen && JoinSession.hasData()) {
-				Screens.getWidgets(screen).add(serverModsButton(client, screen, 4, 4));
+			if (screen instanceof PauseScreen) {
+				onPauseScreen(client, screen);
 			} else if (screen instanceof DisconnectedScreen) {
 				onDisconnectScreen(client, screen, width, height);
 			} else if (screen instanceof ConnectScreen) {
 				onConnectScreen(client, screen, height);
 			}
 		});
+	}
+
+	/** Under the menu's lowest button (Disconnect): "Server mods", then the Mimic build. */
+	private static void onPauseScreen(Minecraft client, Screen screen) {
+		int bottom = ConnectionOverlay.feedTop(screen);
+		if (JoinSession.hasData()) {
+			Screens.getWidgets(screen).add(serverModsButton(client, screen, screen.width / 2 - 50, bottom));
+			bottom += 24;
+		}
+		int labelY = bottom + 2;
+		ScreenEvents.afterExtract(screen).register((s, g, mouseX, mouseY, partialTick) ->
+			g.centeredText(client.font, MimicBuild.label(), s.width / 2, labelY, 0xFFAAAAAA));
 	}
 
 	private static Button serverModsButton(Minecraft client, Screen screen, int x, int y) {
