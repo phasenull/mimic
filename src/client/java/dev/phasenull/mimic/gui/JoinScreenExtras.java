@@ -2,6 +2,7 @@ package dev.phasenull.mimic.gui;
 
 import dev.phasenull.mimic.bypass.RetryLoop;
 import dev.phasenull.mimic.debug.ConnectionDebug;
+import dev.phasenull.mimic.debug.ConnectionOverlay;
 import dev.phasenull.mimic.debug.CopyLogsButton;
 import dev.phasenull.mimic.debug.JoinSession;
 import dev.phasenull.mimic.debug.JoinStatus;
@@ -71,7 +72,21 @@ public final class JoinScreenExtras {
 			retry.setMessage(retryLabel());
 		}
 
-		ScreenEvents.afterExtract(screen).register((s, g, mouseX, mouseY, partialTick) -> drawFeed(client, g, s.width));
+		ScreenEvents.afterExtract(screen).register((s, g, mouseX, mouseY, partialTick) -> {
+			drawFeed(client, g, s.width);
+			drawStats(client, g, s);
+		});
+	}
+
+	/** Below the screen's buttons: what Mimic knows about this server, and the retry state. */
+	private static void drawStats(Minecraft client, GuiGraphicsExtractor g, Screen screen) {
+		int y = ConnectionOverlay.feedTop(screen);
+		String stats = client.font.plainSubstrByWidth(ConnectionOverlay.statsLine(), screen.width - 16);
+		g.centeredText(client.font, stats, screen.width / 2, y, 0xFFAAAAAA);
+		if (RetryLoop.active()) {
+			String retry = "Retrying until connected: try " + RetryLoop.tries() + "/" + RetryLoop.MAX_TRIES;
+			g.centeredText(client.font, retry, screen.width / 2, y + client.font.lineHeight + 2, 0xFFFFFF55);
+		}
 	}
 
 	private static Component retryLabel() {

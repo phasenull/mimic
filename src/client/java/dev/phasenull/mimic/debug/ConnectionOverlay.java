@@ -25,7 +25,7 @@ public final class ConnectionOverlay {
 	private ConnectionOverlay() {}
 
 	/** Below the screen's Cancel button (the lowest visible vanilla button), so the feed never covers it. */
-	private static int feedTop(Screen screen) {
+	public static int feedTop(Screen screen) {
 		int bottom = -1;
 		for (AbstractWidget w : Screens.getWidgets(screen)) {
 			if (w.visible && w instanceof Button && w.getY() < screen.height - 60) {
@@ -33,6 +33,12 @@ public final class ConnectionOverlay {
 			}
 		}
 		return bottom >= 0 ? bottom + 6 : screen.height / 2 + FEED_OFFSET_Y;
+	}
+
+	/** e.g. "NeoForge | 47 mods | 1203 server-only entries | 700 channels learned". */
+	public static String statsLine() {
+		int learned = NeoForgeBypass.learnedChannels();
+		return JoinSession.kind() + " | " + JoinSession.summary() + (learned > 0 ? " | " + learned + " channels learned" : "");
 	}
 
 	public static void register() {
@@ -56,9 +62,7 @@ public final class ConnectionOverlay {
 					y += font.lineHeight + 2;
 				}
 
-				int learned = NeoForgeBypass.learnedChannels();
-				String stats = JoinSession.kind() + " | " + JoinSession.summary() + (learned > 0 ? " | " + learned + " channels learned" : "");
-				g.text(font, font.plainSubstrByWidth(stats, s.width - 8), 4, s.height - 2 * font.lineHeight - 6, CommonColors.LIGHT_GRAY);
+				g.text(font, font.plainSubstrByWidth(statsLine(), s.width - 8), 4, s.height - 2 * font.lineHeight - 6, CommonColors.LIGHT_GRAY);
 
 				String status = font.plainSubstrByWidth(ConnectionDebug.status(), s.width - 8);
 				g.text(font, status, 4, s.height - font.lineHeight - 4, CommonColors.GRAY);
