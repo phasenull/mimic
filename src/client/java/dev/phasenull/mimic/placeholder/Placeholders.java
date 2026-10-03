@@ -160,7 +160,9 @@ public final class Placeholders {
 			Block block = register(BuiltInRegistries.BLOCK, key,
 				// No loot table: the server decides drops, and the game (or JEI, building vanilla data) requires
 				// every block that names one to have it.
-				() -> new PlaceholderBlock(BlockBehaviour.Properties.of().setId(key).strength(1.5f).noLootTable().sound(SoundGuess.of(id)), guess));
+				() -> new PlaceholderBlock(BlockBehaviour.Properties.of().setId(key).strength(1.5f).noLootTable().sound(SoundGuess.of(id))
+					// Shapes come from imported models and can change after an import, so they aren't cached.
+					.dynamicShape(), guess));
 			for (BlockState state : block.getStateDefinition().getPossibleStates()) {
 				state.initCache();
 			}

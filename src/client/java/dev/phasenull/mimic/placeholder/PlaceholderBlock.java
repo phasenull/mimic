@@ -39,6 +39,25 @@ public class PlaceholderBlock extends Block {
 		return guess;
 	}
 
+	// Shapes from the imported jar's models (see ModelShapes); a full block without them.
+
+	@Override
+	protected net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state, net.minecraft.world.level.BlockGetter level,
+			net.minecraft.core.BlockPos pos, net.minecraft.world.phys.shapes.CollisionContext context) {
+		return ModelShapes.outline(state);
+	}
+
+	@Override
+	protected net.minecraft.world.phys.shapes.VoxelShape getCollisionShape(BlockState state, net.minecraft.world.level.BlockGetter level,
+			net.minecraft.core.BlockPos pos, net.minecraft.world.phys.shapes.CollisionContext context) {
+		return ModelShapes.collision(state);
+	}
+
+	@Override
+	protected net.minecraft.world.phys.shapes.VoxelShape getOcclusionShape(BlockState state) {
+		return ModelShapes.full(state) ? net.minecraft.world.phys.shapes.Shapes.block() : net.minecraft.world.phys.shapes.Shapes.empty();
+	}
+
 	/**
 	 * Gives this block a new set of states, e.g. after the mod's jar was imported, so the counts are right
 	 * without restarting. Only call it before the server's ids are applied (Fabric then renumbers all states).

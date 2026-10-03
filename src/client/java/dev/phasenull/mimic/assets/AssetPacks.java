@@ -207,6 +207,7 @@ public final class AssetPacks {
 			copied, namespaces, vanillaSkipped);
 		scannedStates = null;
 		MockRecipes.invalidate();
+		dev.phasenull.mimic.placeholder.ModelShapes.clear();
 		return new ImportResult(namespaces, copied, vanillaSkipped, scannedBlocks, recipes, scan);
 	}
 
