@@ -1,6 +1,7 @@
 package dev.phasenull.mimic.placeholder;
 
 import dev.phasenull.mimic.MimicClient;
+import dev.phasenull.mimic.assets.AssetPacks;
 import dev.phasenull.mimic.debug.JoinStatus;
 import net.minecraft.core.Holder;
 import net.minecraft.core.MappedRegistry;
@@ -80,6 +81,38 @@ public final class Placeholders {
 	/** The state for an unknown block-state id, or null before any server registered placeholders. */
 	public static BlockState unknownState() {
 		return unknownState;
+	}
+
+	/**
+	 * Registers placeholders for every block and item an imported jar describes, so they exist (with the
+	 * jar's block shapes) before any server sends them. Returns {blocks, items} newly registered.
+	 */
+	public static int[] registerFromAssets(String namespace) {
+		int[] added = new int[2];
+		for (String path : AssetPacks.describedIds(namespace, true)) {
+			Identifier id = Identifier.tryBuild(namespace, path);
+			if (id != null && !BuiltInRegistries.BLOCK.containsKey(id) && ensure(BuiltInRegistries.BLOCK, id)) {
+				added[0]++;
+			}
+		}
+		for (String path : AssetPacks.describedIds(namespace, false)) {
+			Identifier id = Identifier.tryBuild(namespace, path);
+			if (id != null && !BuiltInRegistries.ITEM.containsKey(id) && ensure(BuiltInRegistries.ITEM, id)) {
+				added[1]++;
+			}
+		}
+		return added;
+	}
+
+	/** {@link #registerFromAssets} for every imported jar (at startup). */
+	public static void registerAllImported() {
+		for (String namespace : AssetPacks.importedNamespaces()) {
+			if (namespace.equals("minecraft")) {
+				continue;
+			}
+			int[] added = registerFromAssets(namespace);
+			MimicClient.LOGGER.info("[Placeholder] {}: registered {} blocks and {} items from the imported jar", namespace, added[0], added[1]);
+		}
 	}
 
 	/** Registers a placeholder for {@code id} in {@code registry} if it's one Mimic can stand in for. */

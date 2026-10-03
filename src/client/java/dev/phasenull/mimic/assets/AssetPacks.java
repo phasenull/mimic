@@ -228,6 +228,32 @@ public final class AssetPacks {
 		return counts;
 	}
 
+	/**
+	 * Paths of the blocks (blockstates/*.json) or items (items/*.json, or models/item/*.json in older jars)
+	 * a namespace's imported assets describe.
+	 */
+	public static Set<String> describedIds(String namespace, boolean blocks) {
+		Set<String> paths = new TreeSet<>();
+		for (Path dir : packFolders()) {
+			if (dir.equals(USER)) {
+				continue;
+			}
+			Path ns = dir.resolve("assets").resolve(namespace);
+			for (Path folder : blocks ? List.of(ns.resolve("blockstates")) : List.of(ns.resolve("items"), ns.resolve("models").resolve("item"))) {
+				if (!Files.isDirectory(folder)) {
+					continue;
+				}
+				try (Stream<Path> files = Files.walk(folder)) {
+					files.filter(f -> f.getFileName().toString().endsWith(".json")).forEach(f -> paths.add(
+						folder.relativize(f).toString().replace(java.io.File.separatorChar, '/').replaceAll("\\.json$", "")));
+				} catch (IOException ignored) {
+					// Unreadable folder: nothing described.
+				}
+			}
+		}
+		return paths;
+	}
+
 	/** Namespaces with assets in any imported jar. */
 	public static Set<String> importedNamespaces() {
 		Set<String> namespaces = new TreeSet<>();

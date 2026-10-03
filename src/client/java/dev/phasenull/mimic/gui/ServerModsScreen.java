@@ -4,6 +4,7 @@ import dev.phasenull.mimic.MimicClient;
 import dev.phasenull.mimic.assets.AssetPacks;
 import dev.phasenull.mimic.assets.FilePicker;
 import dev.phasenull.mimic.debug.JoinStatus;
+import dev.phasenull.mimic.placeholder.Placeholders;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import java.io.IOException;
@@ -110,7 +111,15 @@ public final class ServerModsScreen {
 		Minecraft client = Minecraft.getInstance();
 		try {
 			Set<String> namespaces = AssetPacks.importJar(jar);
-			JoinStatus.info("[Assets] Imported {} ({}). Its block shapes apply when you rejoin.", jar.getFileName(), namespaces);
+			int blocks = 0;
+			int items = 0;
+			for (String namespace : namespaces) {
+				int[] added = Placeholders.registerFromAssets(namespace);
+				blocks += added[0];
+				items += added[1];
+			}
+			JoinStatus.info("[Assets] Imported {} ({}): {} new block and {} new item placeholders. Shapes of existing ones apply when you rejoin.",
+				jar.getFileName(), namespaces, blocks, items);
 			client.reloadResourcePacks();
 		} catch (IOException e) {
 			MimicClient.LOGGER.warn("Could not import {}", jar, e);

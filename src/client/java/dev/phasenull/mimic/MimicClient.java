@@ -7,6 +7,8 @@ import dev.phasenull.mimic.command.MimicCommand;
 import dev.phasenull.mimic.debug.ConnectionOverlay;
 import dev.phasenull.mimic.debug.CopyLogsButton;
 import dev.phasenull.mimic.debug.ComponentTooltip;
+import dev.phasenull.mimic.placeholder.Placeholders;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import dev.phasenull.mimic.debug.FailedServers;
 import dev.phasenull.mimic.debug.PacketFeed;
 import dev.phasenull.mimic.placeholder.PlaceholderHud;
@@ -31,6 +33,7 @@ public class MimicClient implements ClientModInitializer {
 		PlaceholderHud.register();
 		PacketFeed.register();
 		ComponentTooltip.register();
+		ClientLifecycleEvents.CLIENT_STARTED.register(client -> Placeholders.registerAllImported());
 		JoinScreenExtras.register();
 		RetryLoop.register();
 		HotReloadNotifier.start();
