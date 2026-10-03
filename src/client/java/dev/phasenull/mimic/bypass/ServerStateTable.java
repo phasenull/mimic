@@ -43,6 +43,7 @@ public final class ServerStateTable {
 	/** The table in use while connected (null otherwise), kept to rebuild it after a block is added or reshaped. */
 	private static volatile Map<String, List<BlockState>> installed;
 	private static volatile int serverStates = -1;
+	private static final int OVERFLOW_PADDING = 1 << 14;
 
 	private ServerStateTable() {}
 
@@ -287,7 +288,13 @@ public final class ServerStateTable {
 			MimicClient.LOGGER.warn("[States] Could not write the state table", e);
 		}
 		serverStates = id;
-		// The client's other states (blocks the server doesn't have) after the server's.
+		// Ids just past the server's table (a server-only block with more states than guessed, at the end)
+		// show the unknown block, not whichever client-only block would come next (often a placeholder
+		// left from another server, e.g. a 6400-state cable).
+		for (int pad = 0; pad < OVERFLOW_PADDING; pad++) {
+			registry.addMapping(filler, id++);
+		}
+		// The client's other states (blocks the server doesn't have) after that.
 		for (Block block : BuiltInRegistries.BLOCK) {
 			for (BlockState state : block.getStateDefinition().getPossibleStates()) {
 				if (placed.add(state)) {
