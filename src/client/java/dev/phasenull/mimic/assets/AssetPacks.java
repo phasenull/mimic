@@ -82,9 +82,36 @@ public final class AssetPacks {
 	}
 
 	/** What an import copied: namespaces with files, files copied, and vanilla files left alone. */
-	public record ImportResult(Set<String> namespaces, int files, int vanillaSkipped) {}
+	public record ImportResult(Set<String> namespaces, int files, int vanillaSkipped, int scannedBlocks) {}
 
 	private static final String IMPORT_INFO = "mimic_import.json";
+	private static final String STATES_FILE = "mimic_states.json";
+	private static volatile Map<String, List<BlockPropertyScanner.Prop>> scannedStates;
+
+	/** Block properties read from imported jars' classes ({@link BlockPropertyScanner}), by block id. */
+	public static Map<String, List<BlockPropertyScanner.Prop>> scannedStates() {
+		Map<String, List<BlockPropertyScanner.Prop>> states = scannedStates;
+		if (states != null) {
+			return states;
+		}
+		states = new java.util.HashMap<>();
+		var type = new com.google.gson.reflect.TypeToken<Map<String, List<BlockPropertyScanner.Prop>>>() {}.getType();
+		for (Path dir : packFolders()) {
+			Path file = dir.resolve(STATES_FILE);
+			if (Files.isRegularFile(file)) {
+				try {
+					Map<String, List<BlockPropertyScanner.Prop>> loaded = new com.google.gson.Gson().fromJson(Files.readString(file), type);
+					if (loaded != null) {
+						states.putAll(loaded);
+					}
+				} catch (IOException | RuntimeException e) {
+					MimicClient.LOGGER.warn("[Assets] Unreadable {}", file, e);
+				}
+			}
+		}
+		scannedStates = states;
+		return states;
+	}
 
 	/**
 	 * Copies the assets out of a mod jar into its own pack folder (replacing an earlier import of the same
@@ -99,6 +126,7 @@ public final class AssetPacks {
 		Set<String> namespaces = new TreeSet<>();
 		int copied = 0;
 		int vanillaSkipped = 0;
+		int scannedBlocks = 0;
 		PackResources vanilla = Minecraft.getInstance().getVanillaPackResources().fullResources();
 		try (FileSystem zip = FileSystems.newFileSystem(URI.create("jar:" + jar.toUri()), Map.of())) {
 			Path assets = zip.getPath("/assets");
@@ -133,6 +161,10 @@ public final class AssetPacks {
 					copied++;
 				}
 			}
+			Map<String, List<BlockPropertyScanner.Prop>> states = BlockPropertyScanner.scan(zip, namespaces);
+			scannedBlocks = states.size();
+			Files.createDirectories(target);
+			Files.writeString(target.resolve(STATES_FILE), new com.google.gson.Gson().toJson(states));
 		}
 		for (String namespace : namespaces) {
 			addItemDefinitions(target.resolve("assets").resolve(namespace), namespace);
@@ -143,7 +175,8 @@ public final class AssetPacks {
 		write(target.resolve(IMPORT_INFO), info.toString());
 		MimicClient.LOGGER.info("[Assets] Imported {} for {}: {} files in {}, {} vanilla files left alone", jar.getFileName(), forMod,
 			copied, namespaces, vanillaSkipped);
-		return new ImportResult(namespaces, copied, vanillaSkipped);
+		scannedStates = null;
+		return new ImportResult(namespaces, copied, vanillaSkipped, scannedBlocks);
 	}
 
 	/** The mod a jar folder was imported for (from its Server mods page), or null. */

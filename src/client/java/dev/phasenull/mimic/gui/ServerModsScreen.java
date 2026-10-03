@@ -119,8 +119,8 @@ public final class ServerModsScreen {
 				blocks += added[0];
 				items += added[1];
 			}
-			JoinStatus.info("[Assets] Imported {}: {} files ({}), {} vanilla files left alone, {} new block and {} new item placeholders",
-				jar.getFileName(), result.files(), namespaces, result.vanillaSkipped(), blocks, items);
+			JoinStatus.info("[Assets] Imported {}: {} files ({}), {} vanilla files left alone, block properties of {} blocks read, {} new block and {} new item placeholders",
+				jar.getFileName(), result.files(), namespaces, result.vanillaSkipped(), result.scannedBlocks(), blocks, items);
 			client.reloadResourcePacks();
 		} catch (IOException e) {
 			MimicClient.LOGGER.warn("Could not import {}", jar, e);

@@ -6,6 +6,7 @@ import net.minecraft.world.level.block.state.properties.Property;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.phasenull.mimic.assets.AssetPacks;
+import dev.phasenull.mimic.assets.BlockPropertyScanner;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
@@ -37,8 +38,34 @@ public record StateGuess(List<Property<?>> properties, String source) {
 	}
 
 	/** From an imported jar's blockstate file when there is one, else from the name. */
+	/**
+	 * In order: a count set by hand for this server, the properties read from an imported jar's classes, the
+	 * jar's blockstate file, and the shape the name suggests.
+	 */
 	public static StateGuess of(Identifier id) {
-		return fromAssets(id).orElseGet(() -> fromName(id.getPath()));
+		StateGuess guess = fromScan(id).or(() -> fromAssets(id)).orElseGet(() -> fromName(id.getPath()));
+		Integer override = StateOverrides.get(id.toString());
+		if (override == null || override == guess.states()) {
+			return guess;
+		}
+		if (override <= 1) {
+			return new StateGuess(List.of(), "set by hand (1 state)");
+		}
+		return new StateGuess(List.of(IntegerProperty.create("mimic_state", 0, override - 1)), "set by hand (" + override + " states)");
+	}
+
+	static Optional<StateGuess> fromScan(Identifier id) {
+		List<BlockPropertyScanner.Prop> props = AssetPacks.scannedStates().get(id.toString());
+		if (props == null) {
+			return Optional.empty();
+		}
+		List<Property<?>> properties = new ArrayList<>();
+		for (BlockPropertyScanner.Prop prop : props) {
+			if (!prop.values().isEmpty()) {
+				properties.add(property(prop.name(), prop.values()));
+			}
+		}
+		return Optional.of(new StateGuess(properties, "read from the imported jar's code"));
 	}
 
 	/**
@@ -91,7 +118,13 @@ public record StateGuess(List<Property<?>> properties, String source) {
 	}
 
 	private static Property<?> property(String name, List<String> values) {
-		// Smallest match: "facing" is both the 4-way horizontal and the 6-way property.
+		// Exact match first (keeps the game's value order), else the smallest vanilla property that fits:
+		// "facing" is both the 4-way horizontal and the 6-way property.
+		for (Property<?> vanilla : VANILLA) {
+			if (vanilla.getName().equals(name) && vanillaValues(vanilla).equals(new java.util.HashSet<>(values))) {
+				return vanilla;
+			}
+		}
 		Property<?> best = null;
 		for (Property<?> vanilla : VANILLA) {
 			if (vanilla.getName().equals(name) && vanillaValues(vanilla).containsAll(values)

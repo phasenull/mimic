@@ -4,6 +4,9 @@ import dev.phasenull.mimic.MimicClient;
 import dev.phasenull.mimic.assets.AssetPacks;
 import dev.phasenull.mimic.assets.FilePicker;
 import dev.phasenull.mimic.placeholder.PlaceholderBlock;
+import dev.phasenull.mimic.placeholder.StateGuess;
+import dev.phasenull.mimic.placeholder.StateOverrides;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -29,6 +32,7 @@ public class PlaceholderEntryScreen extends Screen {
 	private final String registry;
 	private final Identifier id;
 	private String message = "";
+	private EditBox states;
 	private int messageColor = CommonColors.GRAY;
 
 	public PlaceholderEntryScreen(Screen parent, String registry, Identifier id) {
@@ -52,12 +56,39 @@ public class PlaceholderEntryScreen extends Screen {
 			.bounds(x, y + 24, 200, 20).build());
 		choose.active = texturable();
 		clear.active = texturable() && AssetPacks.hasUserTexture(registry, id);
+		if (registry.equals("minecraft:block")) {
+			// State count set by hand for this server: wins over everything Mimic works out itself.
+			int fieldY = TOP + 5 * (font.lineHeight + 3) + 4;
+			states = addRenderableWidget(new EditBox(font, x, fieldY, 60, 20, Component.literal("States")));
+			states.setMaxLength(6);
+			Integer override = StateOverrides.get(id.toString());
+			states.setValue(override == null ? "" : override.toString());
+			addRenderableWidget(Button.builder(Component.literal("Set"), b -> setStates()).bounds(x + 64, fieldY, 66, 20).build());
+			addRenderableWidget(Button.builder(Component.literal("Clear"), b -> {
+				StateOverrides.set(id.toString(), null);
+				show("Cleared. Applies when you rejoin.", 0xFF55FF55);
+				rebuildWidgets();
+			}).bounds(x + 134, fieldY, 66, 20).build());
+		}
 		addRenderableWidget(Button.builder(CommonComponents.GUI_BACK, b -> onClose()).bounds(x, y + 52, 200, 20).build());
 	}
 
 	@Override
 	public void onFilesDrop(List<Path> files) {
 		files.stream().filter(p -> p.getFileName().toString().toLowerCase().endsWith(".png")).findFirst().ifPresent(this::useTexture);
+	}
+
+	private void setStates() {
+		try {
+			int count = Integer.parseInt(states.getValue());
+			if (count < 1) {
+				throw new NumberFormatException();
+			}
+			StateOverrides.set(id.toString(), count);
+			show("Set to " + count + " states for this server. Applies when you rejoin.", 0xFF55FF55);
+		} catch (NumberFormatException e) {
+			show("Enter a number of states (1 or more)", 0xFFFF5555);
+		}
 	}
 
 	private void useTexture(Path png) {
@@ -112,10 +143,13 @@ public class PlaceholderEntryScreen extends Screen {
 		switch (registry) {
 			case "minecraft:block" -> {
 				if (BuiltInRegistries.BLOCK.getValue(id) instanceof PlaceholderBlock block) {
-					lines.add("Shown as a placeholder block, " + block.guess().states() + " states (" + block.guess().source() + ")");
+					lines.add("Placeholder block now: " + block.guess().states() + " states (" + block.guess().source() + ")");
 				} else {
 					lines.add("No placeholder (yet): join a Fabric server that has it");
 				}
+				StateGuess next = StateGuess.of(id);
+				lines.add("Next join: " + next.states() + " states (" + next.source() + ")");
+				lines.add("States by hand (this server; empty = automatic):");
 				lines.add(textureStatus("blockstates/" + id.getPath() + ".json"));
 			}
 			case "minecraft:item" -> {
