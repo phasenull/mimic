@@ -37,6 +37,7 @@ public abstract class ConnectScreenMixin {
 		RegistryStandIns.reset();
 		ReconfigLoopGuard.reset();
 		ViaPassthrough.reset();
+		dev.phasenull.mimic.debug.SoundLog.reset();
 		LoginQueryAnswers.reload(data);
 		NeoForgeBypass.onConnecting(address, data);
 	}

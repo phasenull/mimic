@@ -33,7 +33,7 @@ public final class PacketFeed {
 		"entity_position_sync", "teleport_entity", "move_minecart_along_track", "set_entity_data",
 		"move_player_pos", "move_player_rot", "move_player_pos_rot", "move_player_status_only", "player_input",
 		"player_loaded", "client_tick_end", "keep_alive", "ping", "pong", "ping_request", "pong_response",
-		"set_time", "level_particles", "sound", "sound_entity", "animate", "swing", "update_attributes",
+		"set_time", "level_particles", "animate", "swing", "update_attributes",
 		"chunk_batch_start", "chunk_batch_finished", "chunk_batch_received", "light_update", "block_destruction",
 		"player_info_update", "set_health", "set_experience", "debug_sample", "ticking_state", "ticking_step");
 
@@ -60,6 +60,12 @@ public final class PacketFeed {
 	}
 
 	static void packet(boolean incoming, Packet<?> packet, String name) {
+		// Named and logged even with the feed off, so join reports show which sounds arrived.
+		if (incoming && packet instanceof net.minecraft.network.protocol.game.ClientboundSoundPacket sound) {
+			SoundLog.describe(sound.getSound());
+		} else if (incoming && packet instanceof net.minecraft.network.protocol.game.ClientboundSoundEntityPacket sound) {
+			SoundLog.describe(sound.getSound());
+		}
 		if (!enabled || IGNORED.contains(packet.type().id().getPath())) {
 			return;
 		}
@@ -73,6 +79,12 @@ public final class PacketFeed {
 	}
 
 	private static String describe(Packet<?> packet) {
+		if (packet instanceof net.minecraft.network.protocol.game.ClientboundSoundPacket sound) {
+			return " " + SoundLog.describe(sound.getSound()) + String.format(" at %.0f %.0f %.0f", sound.getX(), sound.getY(), sound.getZ());
+		}
+		if (packet instanceof net.minecraft.network.protocol.game.ClientboundSoundEntityPacket sound) {
+			return " " + SoundLog.describe(sound.getSound()) + " on entity " + sound.getId();
+		}
 		if (packet instanceof BundlePacket<?> bundle) {
 			int count = 0;
 			for (Object ignored : bundle.subPackets()) {
