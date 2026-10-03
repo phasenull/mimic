@@ -46,6 +46,10 @@ public final class PlaceholderHud {
 		if (hit instanceof BlockHitResult blockHit && hit.getType() == HitResult.Type.BLOCK) {
 			BlockPos pos = blockHit.getBlockPos();
 			BlockState state = client.level.getBlockState(pos);
+			if (dev.phasenull.mimic.debug.PacketFeed.enabled()) {
+				// Debug: the id this client reads for the block here (the server's number for it).
+				lines.add("state #" + net.minecraft.world.level.block.Block.getId(state) + ": " + state);
+			}
 			if (state == Placeholders.unknownState()) {
 				lines.add("Unknown block");
 				lines.add("the server's block-state id is past every block this client has; import the mods' jars for exact shapes");

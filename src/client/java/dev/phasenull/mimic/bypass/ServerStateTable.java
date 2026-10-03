@@ -196,17 +196,32 @@ public final class ServerStateTable {
 		Set<BlockState> placed = new HashSet<>();
 		int id = 0;
 		int fromVia = 0;
+		StringBuilder dump = new StringBuilder("# first-last block (states, where the states came from)").append(System.lineSeparator());
 		for (Block block : serverOrder) {
 			List<BlockState> states = vanilla.get(BuiltInRegistries.BLOCK.getKey(block).toString());
+			String source = "client";
 			if (states != null) {
 				fromVia++;
+				source = "server version, via ViaVersion";
 			} else {
 				states = block.getStateDefinition().getPossibleStates();
+				if (block instanceof dev.phasenull.mimic.placeholder.PlaceholderBlock placeholder) {
+					source = "placeholder, " + placeholder.guess().source();
+				}
 			}
+			dump.append(id).append('-').append(id + states.size() - 1).append(' ').append(BuiltInRegistries.BLOCK.getKey(block))
+				.append(" (").append(states.size()).append(", ").append(source).append(')').append(System.lineSeparator());
 			for (BlockState state : states) {
 				registry.addMapping(state, id++);
 				placed.add(state);
 			}
+		}
+		try {
+			java.nio.file.Path file = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("mimic").resolve("state_table.txt");
+			java.nio.file.Files.createDirectories(file.getParent());
+			java.nio.file.Files.writeString(file, dump);
+		} catch (java.io.IOException e) {
+			MimicClient.LOGGER.warn("[States] Could not write the state table", e);
 		}
 		int serverStates = id;
 		// The client's other states (blocks the server doesn't have) after the server's.
