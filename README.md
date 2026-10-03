@@ -70,7 +70,8 @@ real textures, models, sounds and recipes too.
   look-alike model with the mod's texture.
 - **Items:** a placeholder item that shows its id and data components.
 - **Entities:** drawn with the mod's model when the jar has a Bedrock/GeckoLib `.geo.json` model (resting
-  pose, no animations); otherwise a name tag.
+  pose, no animations); otherwise as the mod's item of the same name (an easel shows the easel item), or a
+  name tag. You can hit and click them like real entities; the server decides what happens.
 - **Containers:** a mod's inventories (backpacks, machines) open as a plain slot grid above your inventory.
   Clicks go to the server as usual, so moving items in and out works.
 - **Sounds:** server-only sounds play when the mod's jar is imported.
@@ -91,6 +92,7 @@ or let Mimic find it on Modrinth. No restart needed.
 - Vanilla files a jar ships are left alone, so a jar can't replace the game's own textures.
 - Model files using a mod's own loader or model types are rewritten to vanilla equivalents so they render.
 - Recipes are read for display only: on item pages, and in JEI under "Mimic: recipes from mod jars".
+  Ingredient tags the server didn't send are guessed from their names (`c:dusts/redstone` shows redstone).
 - You can also pick your own PNG for any placeholder.
 - **Modrinth:** "Find this mod's jar on Modrinth" looks the mod up for the server's loader and version and
   shows what it found. Nothing is downloaded until you confirm; the file is checked against Modrinth's
@@ -151,8 +153,8 @@ Everything Mimic saves is under `config/mimic/`:
 ./gradlew build
 ```
 
-The jar is written to `build/libs/`. `./gradlew runClient` starts a development client with ViaFabricPlus
-and JEI.
+The jar is written to `build/libs/`. `./gradlew runClient` starts a development client with ViaFabricPlus.
+JEI is only compiled against; to use it in the development client, put the JEI jar in `run/mods`.
 
 ## Limitations
 
