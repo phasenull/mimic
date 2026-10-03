@@ -38,9 +38,11 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-	// Optional JEI support: API at compile time only, never bundled; Mimic's plugin only loads when JEI is installed.
-	compileOnly "mezz.jei:jei-${project.minecraft_version}-common-api:${project.jei_version}"
-	compileOnly "mezz.jei:jei-${project.minecraft_version}-fabric-api:${project.jei_version}"
+	// Optional JEI support, never bundled; Mimic's plugin only loads when JEI is installed. Compiled against
+	// the full JEI jar (it contains the API) and run with that same jar in the dev client: separate API jars
+	// end up on the IDE's launch classpath next to JEI's own copy, and the plugin then can't be cast.
+	compileOnly "mezz.jei:jei-${project.minecraft_version}-fabric:${project.jei_version}"
+	localRuntime "mezz.jei:jei-${project.minecraft_version}-fabric:${project.jei_version}"
 
 	// Dev client only: protocol translation so the test client can join older servers.
 	runtimeOnly "maven.modrinth:viafabricplus:${project.viafabricplus_version}"
