@@ -215,24 +215,41 @@ public final class Placeholders {
 	/** Opens the frozen registry just long enough to add one entry (the value's constructor needs it open too). */
 	@SuppressWarnings("unchecked")
 	static <T, V extends T> V register(Registry<T> registry, ResourceKey<T> key, Supplier<V> factory) {
+		boolean wasFrozen;
+		Object intrusiveBefore;
 		try {
-			FROZEN.set(registry, false);
-			if (intrusive(registry)) {
-				INTRUSIVE.set(registry, new IdentityHashMap<>());
+			wasFrozen = (boolean) FROZEN.get(registry);
+			intrusiveBefore = INTRUSIVE.get(registry);
+		} catch (IllegalAccessException e) {
+			throw new IllegalStateException(e);
+		}
+		try {
+			// At startup (before the game freezes registries) this is an ordinary registration; later the
+			// registry is opened just for this entry.
+			if (wasFrozen) {
+				FROZEN.set(registry, false);
+				if (intrusive(registry)) {
+					INTRUSIVE.set(registry, new IdentityHashMap<>());
+				}
 			}
 			V value = factory.get();
 			Holder.Reference<T> holder = ((WritableRegistry<T>) registry).register(key, value, RegistrationInfo.BUILT_IN);
-			BIND_TAGS.invoke(holder, List.of());
+			if (wasFrozen) {
+				// Frozen registries have bound their tags already; a new entry needs its (empty) set too.
+				BIND_TAGS.invoke(holder, List.of());
+			}
 			keepAfterDisconnect(registry, key.identifier(), holder);
 			return value;
 		} catch (ReflectiveOperationException e) {
 			throw new IllegalStateException(e);
 		} finally {
-			try {
-				INTRUSIVE.set(registry, null);
-				FROZEN.set(registry, true);
-			} catch (IllegalAccessException ignored) {
-				// Made accessible in the static initializer.
+			if (wasFrozen) {
+				try {
+					INTRUSIVE.set(registry, intrusiveBefore);
+					FROZEN.set(registry, true);
+				} catch (IllegalAccessException ignored) {
+					// Made accessible in the static initializer.
+				}
 			}
 		}
 	}

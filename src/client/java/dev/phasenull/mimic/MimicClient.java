@@ -9,7 +9,6 @@ import dev.phasenull.mimic.debug.CopyLogsButton;
 import dev.phasenull.mimic.bypass.ServerStateTable;
 import dev.phasenull.mimic.debug.ComponentTooltip;
 import dev.phasenull.mimic.placeholder.Placeholders;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import dev.phasenull.mimic.debug.FailedServers;
 import dev.phasenull.mimic.debug.PacketFeed;
 import dev.phasenull.mimic.placeholder.PlaceholderHud;
@@ -36,7 +35,9 @@ public class MimicClient implements ClientModInitializer {
 		ComponentTooltip.register();
 		ServerStateTable.register();
 		dev.phasenull.mimic.debug.SelfTest.register();
-		ClientLifecycleEvents.CLIENT_STARTED.register(client -> Placeholders.registerAllImported());
+		// Before the game's first resource load, so their models load with everything else (registered once
+		// that load had started, blocks got no models until the next reload and showed as missing).
+		Placeholders.registerAllImported();
 		JoinScreenExtras.register();
 		RetryLoop.register();
 		HotReloadNotifier.start();
