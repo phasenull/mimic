@@ -38,12 +38,17 @@ public final class ModelShapes {
 	private static final Shape FULL = new Shape(Shapes.block(), Shapes.block(), true);
 	private static final int MAX_PARENTS = 16;
 	private static final Map<BlockState, Shape> CACHE = new ConcurrentHashMap<>();
+	/** Parsed files, shared by all states (some mod blocks have thousands). */
+	private static final Map<Identifier, Optional<JsonObject>> DEFINITIONS = new ConcurrentHashMap<>();
+	private static final Map<String, Optional<List<double[]>>> ELEMENTS = new ConcurrentHashMap<>();
 
 	private ModelShapes() {}
 
 	/** Forgets computed shapes (after a jar import or a texture change). */
 	public static void clear() {
 		CACHE.clear();
+		DEFINITIONS.clear();
+		ELEMENTS.clear();
 	}
 
 	public static VoxelShape outline(BlockState state) {
@@ -76,7 +81,8 @@ public final class ModelShapes {
 
 	private static Shape compute(BlockState state) {
 		Identifier id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
-		Optional<JsonObject> definition = AssetPacks.readJson(id.getNamespace(), "blockstates/" + id.getPath() + ".json");
+		Optional<JsonObject> definition = DEFINITIONS.computeIfAbsent(id,
+			k -> AssetPacks.readJson(k.getNamespace(), "blockstates/" + k.getPath() + ".json"));
 		if (definition.isEmpty()) {
 			return FULL;
 		}
@@ -104,7 +110,7 @@ public final class ModelShapes {
 		double[] bounds = {16, 16, 16, 0, 0, 0};
 		boolean anyElements = false;
 		for (Placed p : placed) {
-			List<double[]> boxes = elements(p.model());
+			List<double[]> boxes = ELEMENTS.computeIfAbsent(p.model(), m -> Optional.ofNullable(elements(m))).orElse(null);
 			if (boxes == null) {
 				// A model without elements (e.g. a plain cube or a block-entity model): treat as a full block.
 				return FULL;

@@ -120,7 +120,7 @@ public final class Placeholders {
 				StateGuess guess = StateGuess.of(id);
 				if (block.reshape(guess)) {
 					JoinStatus.info("[Placeholder] {}: now {} states, {}", id, guess.states(), guess.source());
-					dev.phasenull.mimic.bypass.ServerStateTable.refresh();
+					dev.phasenull.mimic.bypass.ServerStateTable.refreshSoon();
 				}
 			}
 			return true;

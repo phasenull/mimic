@@ -78,6 +78,13 @@ public final class ServerStateTable {
 		// state in this client's order; put the server's order back. Registered after Fabric's tracker too.
 		net.fabricmc.fabric.api.event.registry.RegistryEntryAddedCallback.event(BuiltInRegistries.BLOCK).register((rawId, id, block) -> {
 			if (!applying && installed != null) {
+				refreshSoon();
+			}
+		});
+		// Many blocks added at once (a jar import) rebuild the table once, at the end of the tick.
+		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
+			if (refreshPending) {
+				refreshPending = false;
 				refresh();
 			}
 		});
@@ -115,6 +122,13 @@ public final class ServerStateTable {
 		} catch (ReflectiveOperationException | RuntimeException e) {
 			MimicClient.LOGGER.warn("[States] Could not build the server's block-state table", e);
 		}
+	}
+
+	private static volatile boolean refreshPending;
+
+	/** Rebuilds the table at the end of this tick (once, however many blocks change before then). */
+	public static void refreshSoon() {
+		refreshPending = true;
 	}
 
 	/** Rebuilds the table in use (after a placeholder block was added or got new states), if there is one. */

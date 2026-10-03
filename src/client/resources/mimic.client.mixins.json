@@ -11,6 +11,7 @@
 		"SoundManagerMixin",
 		"ClientBrandRetrieverMixin",
 		"MenuScreensMixin",
+		"ModelManagerMixin",
 		"IdMapperMixin",
 		"ClientCommonPacketListenerImplAccessor",
 		"ConnectionMixin",
