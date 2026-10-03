@@ -43,6 +43,12 @@ public final class PlaceholderHud {
 
 	private static List<String> lines(Minecraft client, HitResult hit) {
 		List<String> lines = new ArrayList<>();
+		if (dev.phasenull.mimic.debug.PacketFeed.enabled() && client.player != null) {
+			// Debug: what decides whether this client plays your footsteps.
+			BlockPos on = client.player.getOnPos();
+			lines.add("you: silent=" + client.player.isSilent() + " onGround=" + client.player.onGround()
+				+ " on " + BuiltInRegistries.BLOCK.getKey(client.level.getBlockState(on).getBlock()));
+		}
 		if (hit instanceof BlockHitResult blockHit && hit.getType() == HitResult.Type.BLOCK) {
 			BlockPos pos = blockHit.getBlockPos();
 			BlockState state = client.level.getBlockState(pos);

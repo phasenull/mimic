@@ -26,6 +26,7 @@ public final class PacketFeed {
 	private static final int IN_COLOR = 0xFF77FF77;
 	private static final int OUT_COLOR = 0xFF77BBFF;
 	private static final int NOTE_COLOR = 0xFFFF7777;
+	private static final int SOUND_COLOR = 0xFFFFDD77;
 
 	/** Constant background traffic (movement, keep-alives, time, particles, sounds) that would bury the rest. */
 	private static final Set<String> IGNORED = Set.of(
@@ -70,6 +71,11 @@ public final class PacketFeed {
 			return;
 		}
 		add((incoming ? "IN  " : "OUT ") + name + describe(packet), incoming ? IN_COLOR : OUT_COLOR);
+	}
+
+	/** A sound this client started (see SoundManagerMixin). */
+	public static void sound(String detail) {
+		add("PLAY " + detail, SOUND_COLOR);
 	}
 
 	static void note(String kind, String detail) {
