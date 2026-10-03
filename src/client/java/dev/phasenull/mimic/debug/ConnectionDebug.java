@@ -274,6 +274,11 @@ public final class ConnectionDebug {
 		}
 	}
 
+	/** The joining connection (a net.minecraft.network.Connection), or null. */
+	public static Object trackedConnection() {
+		return tracked;
+	}
+
 	public static boolean isTracked(Object connection) {
 		return connection != null && connection == tracked;
 	}

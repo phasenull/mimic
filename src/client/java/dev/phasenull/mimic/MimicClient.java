@@ -6,6 +6,7 @@ import dev.phasenull.mimic.bypass.neoforge.NeoForgeBypass;
 import dev.phasenull.mimic.command.MimicCommand;
 import dev.phasenull.mimic.debug.ConnectionOverlay;
 import dev.phasenull.mimic.debug.CopyLogsButton;
+import dev.phasenull.mimic.bypass.ServerStateTable;
 import dev.phasenull.mimic.debug.ComponentTooltip;
 import dev.phasenull.mimic.placeholder.Placeholders;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
@@ -33,6 +34,7 @@ public class MimicClient implements ClientModInitializer {
 		PlaceholderHud.register();
 		PacketFeed.register();
 		ComponentTooltip.register();
+		ServerStateTable.register();
 		ClientLifecycleEvents.CLIENT_STARTED.register(client -> Placeholders.registerAllImported());
 		JoinScreenExtras.register();
 		RetryLoop.register();

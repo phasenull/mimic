@@ -1,5 +1,6 @@
 package dev.phasenull.mimic.mixin;
 
+import dev.phasenull.mimic.bypass.ServerStateTable;
 import dev.phasenull.mimic.bypass.ViaPassthrough;
 import dev.phasenull.mimic.placeholder.Placeholders;
 import dev.phasenull.mimic.debug.JoinSession;
@@ -44,6 +45,8 @@ public abstract class ClientRegistrySyncHandlerMixin {
 		int placeholders = 0;
 		int keptClientNumbering = 0;
 		JoinSession.kind("Fabric");
+		Object2IntMap<Identifier> serverBlocks = payload.registryMap().get(Identifier.withDefaultNamespace("block"));
+		ServerStateTable.applying(true, serverBlocks == null ? java.util.Set.of() : new java.util.HashSet<>(serverBlocks.keySet()));
 		Placeholders.ensureUnknownBlock();
 		for (Map.Entry<Identifier, Object2IntMap<Identifier>> registry : payload.registryMap().entrySet()) {
 			Registry<?> local = BuiltInRegistries.REGISTRY.getValue(registry.getKey());
@@ -84,4 +87,5 @@ public abstract class ClientRegistrySyncHandlerMixin {
 		JoinStatus.info("[Fabric] Registry sync: skipped {} unknown registries and {} unknown entries", droppedRegistries, droppedEntries);
 		return new RegistrySyncPayload(kept, payload.registryAttributes());
 	}
+
 }
