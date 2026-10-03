@@ -70,7 +70,10 @@ public class PlaceholderEntryScreen extends Screen {
 				rebuildWidgets();
 			}).bounds(x + 134, fieldY, 66, 20).build());
 		}
-		addRenderableWidget(Button.builder(CommonComponents.GUI_BACK, b -> onClose()).bounds(x, y + 52, 200, 20).build());
+		addRenderableWidget(Button.builder(CommonComponents.GUI_BACK, b -> onClose()).bounds(x, y + 52, 98, 20).build());
+		Button recipes = addRenderableWidget(Button.builder(Component.literal("Recipes (" + RecipesScreen.count(id.toString()) + ")"),
+			b -> minecraft.gui.setScreen(RecipesScreen.create(this, id.toString()))).bounds(x + 102, y + 52, 98, 20).build());
+		recipes.active = texturable();
 	}
 
 	@Override

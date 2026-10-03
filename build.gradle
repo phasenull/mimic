@@ -8,6 +8,10 @@ repositories {
 		forRepository { maven { url = 'https://api.modrinth.com/maven' } }
 		filter { includeGroup 'maven.modrinth' }
 	}
+	exclusiveContent {
+		forRepository { maven { url = 'https://maven.blamejared.com' } }
+		filter { includeGroup 'mezz.jei' }
+	}
 	// Add repositories to retrieve artifacts from in here.
 	// You should only use this when depending on other mods because
 	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
@@ -33,6 +37,10 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// Optional JEI support: API at compile time only, never bundled; Mimic's plugin only loads when JEI is installed.
+	compileOnly "mezz.jei:jei-${project.minecraft_version}-common-api:${project.jei_version}"
+	compileOnly "mezz.jei:jei-${project.minecraft_version}-fabric-api:${project.jei_version}"
 
 	// Dev client only: protocol translation so the test client can join older servers.
 	runtimeOnly "maven.modrinth:viafabricplus:${project.viafabricplus_version}"

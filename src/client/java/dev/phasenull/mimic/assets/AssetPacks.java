@@ -82,7 +82,7 @@ public final class AssetPacks {
 	}
 
 	/** What an import copied: namespaces with files, files copied, and vanilla files left alone. */
-	public record ImportResult(Set<String> namespaces, int files, int vanillaSkipped, int scannedBlocks) {}
+	public record ImportResult(Set<String> namespaces, int files, int vanillaSkipped, int scannedBlocks, int recipes) {}
 
 	private static final String IMPORT_INFO = "mimic_import.json";
 	private static final String STATES_FILE = "mimic_states.json";
@@ -127,6 +127,7 @@ public final class AssetPacks {
 		int copied = 0;
 		int vanillaSkipped = 0;
 		int scannedBlocks = 0;
+		int recipes = 0;
 		PackResources vanilla = Minecraft.getInstance().getVanillaPackResources().fullResources();
 		try (FileSystem zip = FileSystems.newFileSystem(URI.create("jar:" + jar.toUri()), Map.of())) {
 			Path assets = zip.getPath("/assets");
@@ -161,6 +162,7 @@ public final class AssetPacks {
 					copied++;
 				}
 			}
+			recipes = copyRecipes(zip, target);
 			Map<String, List<BlockPropertyScanner.Prop>> states = BlockPropertyScanner.scan(zip, namespaces);
 			scannedBlocks = states.size();
 			Files.createDirectories(target);
@@ -176,7 +178,44 @@ public final class AssetPacks {
 		MimicClient.LOGGER.info("[Assets] Imported {} for {}: {} files in {}, {} vanilla files left alone", jar.getFileName(), forMod,
 			copied, namespaces, vanillaSkipped);
 		scannedStates = null;
-		return new ImportResult(namespaces, copied, vanillaSkipped, scannedBlocks);
+		MockRecipes.invalidate();
+		return new ImportResult(namespaces, copied, vanillaSkipped, scannedBlocks, recipes);
+	}
+
+	/** Recipe files (data/<ns>/recipe or recipes) as data: shown on item pages and in JEI, never used by the game. */
+	private static int copyRecipes(FileSystem zip, Path target) throws IOException {
+		Path data = zip.getPath("/data");
+		if (!Files.isDirectory(data)) {
+			return 0;
+		}
+		int count = 0;
+		try (Stream<Path> files = Files.walk(data)) {
+			for (Path file : (Iterable<Path>) files::iterator) {
+				Path relative = zip.getPath("/").relativize(file);
+				if (Files.isDirectory(file) || !file.toString().endsWith(".json") || relative.getNameCount() < 4) {
+					continue;
+				}
+				String folder = relative.getName(2).toString();
+				if (!folder.equals("recipe") && !folder.equals("recipes")) {
+					continue;
+				}
+				Path out = target.resolve(relative.toString());
+				if (!out.normalize().startsWith(target)) {
+					continue;
+				}
+				Files.createDirectories(out.getParent());
+				Files.copy(file, out, StandardCopyOption.REPLACE_EXISTING);
+				count++;
+			}
+		}
+		return count;
+	}
+
+	/** Imported jar folders (not the user pack). */
+	public static List<Path> jarFolders() {
+		List<Path> folders = new ArrayList<>(packFolders());
+		folders.remove(USER);
+		return folders;
 	}
 
 	/** The mod a jar folder was imported for (from its Server mods page), or null. */

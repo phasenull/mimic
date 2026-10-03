@@ -13,6 +13,9 @@
 	"entrypoints": {
 		"client": [
 			"dev.phasenull.mimic.MimicClient"
+		],
+		"jei_mod_plugin": [
+			"dev.phasenull.mimic.compat.MimicJeiPlugin"
 		]
 	},
 	"mixins": [
