@@ -35,6 +35,7 @@ public class MimicClient implements ClientModInitializer {
 		PacketFeed.register();
 		ComponentTooltip.register();
 		ServerStateTable.register();
+		dev.phasenull.mimic.debug.SelfTest.register();
 		ClientLifecycleEvents.CLIENT_STARTED.register(client -> Placeholders.registerAllImported());
 		JoinScreenExtras.register();
 		RetryLoop.register();

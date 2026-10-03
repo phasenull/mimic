@@ -115,6 +115,14 @@ public final class MimicCommand {
 						ctx.getSource().sendFeedback(Component.literal("Removed the anchor for " + block + ". Rejoin to apply."));
 						return 1;
 					})))
+				.then(ClientCommands.literal("selftest").executes(ctx -> {
+					Minecraft client = Minecraft.getInstance();
+					if (client.player == null) {
+						return 0;
+					}
+					dev.phasenull.mimic.debug.SelfTest.run(client).lines().forEach(ctx.getSource()::sendFeedback);
+					return 1;
+				}))
 				.then(ClientCommands.literal("anchors").executes(ctx -> {
 					Map<String, Integer> anchors = StateAnchors.current();
 					if (anchors.isEmpty()) {

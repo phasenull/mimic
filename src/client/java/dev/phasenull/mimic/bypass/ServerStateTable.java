@@ -45,6 +45,21 @@ public final class ServerStateTable {
 	private static volatile int serverStates = -1;
 	private static final int OVERFLOW_PADDING = 1 << 14;
 
+	/** One block's run in the server's numbering; {@code guessed} when its state count is a guess. */
+	public record Entry(int first, int last, Identifier block, String source, boolean guessed) {}
+
+	private static volatile List<Entry> entries = List.of();
+
+	/** The table in use, in server order (empty when not connected through it). */
+	public static List<Entry> entries() {
+		return entries;
+	}
+
+	/** Blocks the server listed in its registry sync. */
+	public static boolean serverHas(Identifier block) {
+		return SERVER_BLOCKS.contains(block);
+	}
+
 	private ServerStateTable() {}
 
 	public static void register() {
@@ -72,6 +87,7 @@ public final class ServerStateTable {
 			applying = false;
 			installed = null;
 			serverStates = -1;
+			entries = List.of();
 		});
 	}
 
@@ -248,6 +264,7 @@ public final class ServerStateTable {
 		Map<String, Integer> anchors = StateAnchors.current();
 		BlockState filler = dev.phasenull.mimic.placeholder.Placeholders.unknownState() != null
 			? dev.phasenull.mimic.placeholder.Placeholders.unknownState() : Blocks.AIR.defaultBlockState();
+		List<Entry> table = new ArrayList<>();
 		StringBuilder dump = new StringBuilder("# first-last block (states, where the states came from)").append(System.lineSeparator());
 		for (Block block : serverOrder) {
 			List<BlockState> states = vanilla.get(BuiltInRegistries.BLOCK.getKey(block).toString());
@@ -273,6 +290,8 @@ public final class ServerStateTable {
 				}
 				id = anchor;
 			}
+			table.add(new Entry(id, id + states.size() - 1, BuiltInRegistries.BLOCK.getKey(block), source,
+				block instanceof dev.phasenull.mimic.placeholder.PlaceholderBlock));
 			dump.append(id).append('-').append(id + states.size() - 1).append(' ').append(BuiltInRegistries.BLOCK.getKey(block))
 				.append(" (").append(states.size()).append(", ").append(source).append(')').append(System.lineSeparator());
 			for (BlockState state : states) {
@@ -288,6 +307,7 @@ public final class ServerStateTable {
 			MimicClient.LOGGER.warn("[States] Could not write the state table", e);
 		}
 		serverStates = id;
+		entries = List.copyOf(table);
 		// Ids just past the server's table (a server-only block with more states than guessed, at the end)
 		// show the unknown block, not whichever client-only block would come next (often a placeholder
 		// left from another server, e.g. a 6400-state cable).
