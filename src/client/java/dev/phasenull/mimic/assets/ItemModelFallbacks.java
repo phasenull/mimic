@@ -19,6 +19,9 @@ import java.util.stream.Stream;
  * the whole file and the item shows as missing. This rewrites those parts to vanilla ones: a switch on an
  * unknown property takes its fallback (or first case), unknown tints become constants, an unknown special
  * model uses its base model, and other unknown models are left empty.
+ * <p>
+ * Block-state files get the same treatment: a variant with a mod's own loader ("fabric:type": "lootr:custom")
+ * becomes a plain model variant using the first block model it names.
  */
 public final class ItemModelFallbacks {
 	private ItemModelFallbacks() {}
@@ -33,7 +36,14 @@ public final class ItemModelFallbacks {
 		try (Stream<Path> files = Files.walk(assets)) {
 			for (Path file : (Iterable<Path>) files::iterator) {
 				Path relative = assets.relativize(file);
-				if (relative.getNameCount() < 3 || !relative.getName(1).toString().equals("items") || !file.toString().endsWith(".json")) {
+				if (relative.getNameCount() < 3 || !file.toString().endsWith(".json")) {
+					continue;
+				}
+				if (relative.getName(1).toString().equals("blockstates")) {
+					changed += blockState(file) ? 1 : 0;
+					continue;
+				}
+				if (!relative.getName(1).toString().equals("items")) {
 					continue;
 				}
 				try {
@@ -59,6 +69,78 @@ public final class ItemModelFallbacks {
 			MimicClient.LOGGER.info("[Assets] {}: {} item definitions rewritten to vanilla model types", packDir.getFileName(), changed);
 		}
 		return changed;
+	}
+
+	private static boolean blockState(Path file) {
+		try {
+			JsonObject definition = JsonParser.parseString(Files.readString(file)).getAsJsonObject();
+			if (!definition.has("variants") || !definition.get("variants").isJsonObject()) {
+				return false;
+			}
+			boolean changed = false;
+			JsonObject variants = definition.getAsJsonObject("variants");
+			for (String key : variants.keySet()) {
+				JsonElement variant = variants.get(key);
+				if (variant.isJsonObject()) {
+					JsonObject fixed = variant(variant.getAsJsonObject());
+					if (fixed != null) {
+						variants.add(key, fixed);
+						changed = true;
+					}
+				} else if (variant.isJsonArray()) {
+					JsonArray list = variant.getAsJsonArray();
+					for (int i = 0; i < list.size(); i++) {
+						JsonObject fixed = list.get(i).isJsonObject() ? variant(list.get(i).getAsJsonObject()) : null;
+						if (fixed != null) {
+							list.set(i, fixed);
+							changed = true;
+						}
+					}
+				}
+			}
+			if (changed) {
+				Files.writeString(file, new GsonBuilder().setPrettyPrinting().create().toJson(definition));
+			}
+			return changed;
+		} catch (IOException | RuntimeException e) {
+			MimicClient.LOGGER.debug("[Assets] Could not check block state {}", file, e);
+			return false;
+		}
+	}
+
+	/** A plain variant for one using a mod's own loader, or null if it doesn't need one. */
+	private static JsonObject variant(JsonObject in) {
+		String type = string(in, "fabric:type");
+		if (type == null || known(type)) {
+			return null;
+		}
+		String model = string(in, "model");
+		for (String key : new String[] {"unopened", "vanilla", "default", "base", "stage_0"}) {
+			if (model == null) {
+				model = string(in, key);
+			}
+		}
+		if (model == null) {
+			for (String key : in.keySet()) {
+				String value = string(in, key);
+				if (value != null && value.contains("block/")) {
+					model = value;
+					break;
+				}
+			}
+		}
+		if (model == null) {
+			model = "minecraft:block/stone";
+		}
+		JsonObject out = new JsonObject();
+		out.addProperty("model", model);
+		JsonObject rotation = in.has("state") && in.get("state").isJsonObject() ? in.getAsJsonObject("state") : in;
+		for (String key : new String[] {"x", "y", "uvlock"}) {
+			if (rotation.has(key)) {
+				out.add(key, rotation.get(key));
+			}
+		}
+		return out;
 	}
 
 	/** Vanilla types, and those of mods this client actually has. */

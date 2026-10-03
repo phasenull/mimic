@@ -172,6 +172,37 @@ public final class Placeholders {
 		}
 	}
 
+	/**
+	 * While connected, Fabric keeps a snapshot of each registry from before the server's ids were applied and
+	 * restores it on disconnect, which drops anything registered since (a jar imported mid-game). The item
+	 * would then be gone while its data components are still set up, and every later join fails with
+	 * "Missing element". So an entry added while a snapshot exists is added to the snapshot too.
+	 */
+	@SuppressWarnings("unchecked")
+	private static <T> void keepAfterDisconnect(Registry<T> registry, Identifier id, Holder.Reference<T> holder) {
+		try {
+			Map<Identifier, Holder.Reference<T>> entries = null;
+			it.unimi.dsi.fastutil.objects.Object2IntMap<Identifier> indexed = null;
+			for (Field field : MappedRegistry.class.getDeclaredFields()) {
+				if (field.getName().contains("prevEntries")) {
+					field.setAccessible(true);
+					entries = (Map<Identifier, Holder.Reference<T>>) field.get(registry);
+				} else if (field.getName().contains("prevIndexedEntries")) {
+					field.setAccessible(true);
+					indexed = (it.unimi.dsi.fastutil.objects.Object2IntMap<Identifier>) field.get(registry);
+				}
+			}
+			if (entries == null || indexed == null || entries.containsKey(id)) {
+				return;
+			}
+			int next = indexed.values().intStream().max().orElse(-1) + 1;
+			indexed.put(id, next);
+			entries.put(id, holder);
+		} catch (ReflectiveOperationException | RuntimeException e) {
+			MimicClient.LOGGER.warn("[Placeholder] Could not keep {} for after disconnecting", id, e);
+		}
+	}
+
 	/** Registries whose values make their own holder when constructed (blocks, items, entity types...). */
 	private static boolean intrusive(Registry<?> registry) {
 		return registry != BuiltInRegistries.SOUND_EVENT;
@@ -188,6 +219,7 @@ public final class Placeholders {
 			V value = factory.get();
 			Holder.Reference<T> holder = ((WritableRegistry<T>) registry).register(key, value, RegistrationInfo.BUILT_IN);
 			BIND_TAGS.invoke(holder, List.of());
+			keepAfterDisconnect(registry, key.identifier(), holder);
 			return value;
 		} catch (ReflectiveOperationException e) {
 			throw new IllegalStateException(e);
