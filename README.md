@@ -48,6 +48,12 @@ real textures, models, sounds and recipes too.
 - Claims NeoForge's own built-in channels, acknowledges its configuration checks (registry sync, data maps,
   extensible enums, feature flags) and joins split packets.
 
+### Forge servers (1.20.1 and older, with ViaFabricPlus)
+- Learns that a server runs Forge from its "requires Forge" kick and reconnects as a Forge client: answers
+  the FML login handshake with the server's own mod list.
+- Reads the registry snapshots Forge sends, gives server-only blocks, items and entities placeholders, and
+  maps Forge's mod block and item ids (which ViaVersion would drop) to them.
+
 ### Other Minecraft versions (with ViaFabricPlus)
 - Passes block, item, sound, particle and entity ids through ViaVersion untouched when the server synced them,
   so modded content keeps its ids instead of being mapped to something random.
@@ -58,16 +64,27 @@ real textures, models, sounds and recipes too.
 ### Placeholders
 - **Blocks:** a missing-texture block with the right number of states, guessed from the mod's jar (its
   classes and block-state files) or from the block's name. Break/step sounds are borrowed from a similarly
-  named vanilla block.
+  named vanilla block. With the jar imported, its outline and collision shape follow the mod's model, so
+  you don't bump into cables and slabs as if they were full blocks.
+- **Block-entity blocks:** chests, shulker boxes and pots that a mod draws with code get a static vanilla
+  look-alike model with the mod's texture.
 - **Items:** a placeholder item that shows its id and data components.
-- **Entities:** a box with a name tag.
+- **Entities:** drawn with the mod's model when the jar has a Bedrock/GeckoLib `.geo.json` model (resting
+  pose, no animations); otherwise a name tag.
+- **Containers:** a mod's inventories (backpacks, machines) open as a plain slot grid above your inventory.
+  Clicks go to the server as usual, so moving items in and out works.
+- **Sounds:** server-only sounds play when the mod's jar is imported.
 - **Hover info:** look at a placeholder to see what it stands in for.
 - **Anchors:** if blocks still look shifted, `/mimic verify` pins a block you know is right, so a miscount
   earlier in the list stops there.
+- **Self-test:** a few seconds after joining, Mimic checks the blocks around you. If blocks that never
+  generate naturally (command blocks, barriers...) or placeholders of blocks the server doesn't have show
+  up in the terrain, it says where the ids start to shift and which guessed block before that most likely
+  has the wrong state count.
 
 ### Importing a mod's jar
-From the pause menu, open **Server mods**, pick a mod, and import its jar (or drop the jar on the screen).
-No restart needed.
+From the pause menu, open **Server mods**, pick a mod, and import its jar (or drop the jar on the screen),
+or let Mimic find it on Modrinth. No restart needed.
 
 - Only asset and data files are copied (`png`, `json`, `mcmeta`, `ogg`, `txt`, `lang`). **No code is
   loaded or run.**
@@ -75,13 +92,29 @@ No restart needed.
 - Model files using a mod's own loader or model types are rewritten to vanilla equivalents so they render.
 - Recipes are read for display only: on item pages, and in JEI under "Mimic: recipes from mod jars".
 - You can also pick your own PNG for any placeholder.
+- **Modrinth:** "Find this mod's jar on Modrinth" looks the mod up for the server's loader and version and
+  shows what it found. Nothing is downloaded until you confirm; the file is checked against Modrinth's
+  SHA-512, imported as data only, and deleted afterwards.
+
+### Safety scan
+Every imported jar is read (as data, with nothing run) for signs of malware: starting programs, loading
+code from bytes or the internet, reading browser, Discord or launcher credentials, Discord webhooks,
+autostart entries, native code, known Fractureiser markers, heavy obfuscation. The report is on the mod's
+page, and you can scan any jar from there without importing it, e.g. before installing a mod for real. It's
+a heuristic: a clean scan doesn't prove a jar is safe.
+
+### Privacy
+**Server mods > Privacy** lists everything your client has sent to servers (packet types and mod channels)
+and what each one tells the server. You can stop sending any of them (packets needed to stay connected
+excepted) and report your client as vanilla instead of Fabric.
 
 ### Debugging joins
 - **Join reports:** every failed join writes a report to `config/mimic/reports/` with the connection log
   and the relevant game log.
 - **Server list badge:** servers whose last join failed in a way Mimic can't get past yet are marked.
 - **Retry until connected,** and a guard that stops servers that keep reconfiguring the client in a loop.
-- **Packets:** a toggle in the pause menu shows a live feed of incoming packets (noisy ones hidden).
+- **Packets:** a toggle in the pause menu shows a live feed of incoming packets (noisy ones hidden), the
+  sounds your client plays, and debug info under the crosshair.
 - **Data components:** shown in item tooltips with advanced tooltips (F3+H) and Shift.
 
 ## Commands
@@ -93,6 +126,7 @@ No restart needed.
 | `/mimic unverify <block>` | Remove one pin |
 | `/mimic nudge <block> <n>` | Move a pin by `n` states |
 | `/mimic anchors [clear]` | List (or clear) this server's pins |
+| `/mimic selftest` | Check the blocks around you for shifted ids now |
 
 Pins take effect when you rejoin.
 
@@ -107,6 +141,9 @@ Everything Mimic saves is under `config/mimic/`:
 | `neoforge_channels.json` | NeoForge channels learned per server |
 | `state_anchors.json` | Block-state pins per server |
 | `failed_servers.json` | Servers marked in the server list |
+| `block_outgoing.txt` | Packets and channels never sent (edited from Privacy) |
+| `privacy.json` | The client brand to report |
+| `forge_servers.txt` | Servers known to run legacy Forge |
 
 ## Building
 
@@ -119,12 +156,13 @@ and JEI.
 
 ## Limitations
 
-- Mods' behaviour doesn't exist on your client: no custom screens, machines, entity models or client-side
-  effects.
+- Mods' behaviour doesn't exist on your client: no custom screens (only a plain slot grid), machine
+  animations, entity animations or client-side effects. Entity models written in Java code can't be read.
 - Data a mod adds to vanilla things (custom data components, entity data) can't be read and is skipped.
 - Block states of server-only blocks are guessed; without the mod's jar, some blocks may show the wrong
   variant until you import it or pin them.
-- Forge (pre-NeoForge) servers aren't supported yet.
+- Forge support covers the login handshake and ids; Forge's play-time mod networking isn't emulated.
+- NeoForge servers don't get placeholders for their mods' blocks and items yet.
 
 ## License
 
