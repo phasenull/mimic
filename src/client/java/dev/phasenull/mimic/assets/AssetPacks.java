@@ -3,6 +3,9 @@ package dev.phasenull.mimic.assets;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.phasenull.mimic.MimicClient;
+import net.minecraft.client.Minecraft;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.PackResources;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -78,15 +81,25 @@ public final class AssetPacks {
 		return folders;
 	}
 
+	/** What an import copied: namespaces with files, files copied, and vanilla files left alone. */
+	public record ImportResult(Set<String> namespaces, int files, int vanillaSkipped) {}
+
+	private static final String IMPORT_INFO = "mimic_import.json";
+
 	/**
 	 * Copies the assets out of a mod jar into its own pack folder (replacing an earlier import of the same
-	 * jar name). Returns the asset namespaces it contained.
+	 * jar name), recording that it was imported for {@code forMod}. Files in the minecraft namespace are only
+	 * added when this client's vanilla assets don't have them (a backport mod ships copies of newer vanilla
+	 * assets, which would replace this version's own); atlases and language files merge, so they are kept.
 	 */
-	public static Set<String> importJar(Path jar) throws IOException {
+	public static ImportResult importJar(Path jar, String forMod) throws IOException {
 		String base = jar.getFileName().toString().replaceAll("(?i)\\.jar$", "").replaceAll("[^a-zA-Z0-9._-]", "_");
 		Path target = ROOT.resolve(JAR_PREFIX + base);
 		deleteTree(target);
 		Set<String> namespaces = new TreeSet<>();
+		int copied = 0;
+		int vanillaSkipped = 0;
+		PackResources vanilla = Minecraft.getInstance().getVanillaPackResources().fullResources();
 		try (FileSystem zip = FileSystems.newFileSystem(URI.create("jar:" + jar.toUri()), Map.of())) {
 			Path assets = zip.getPath("/assets");
 			if (!Files.isDirectory(assets)) {
@@ -98,8 +111,17 @@ public final class AssetPacks {
 						continue;
 					}
 					Path relative = zip.getPath("/").relativize(file);
-					if (relative.getNameCount() > 1) {
-						namespaces.add(relative.getName(1).toString());
+					if (relative.getNameCount() < 3) {
+						continue;
+					}
+					String namespace = relative.getName(1).toString();
+					String inNamespace = relative.subpath(2, relative.getNameCount()).toString().replace('\\', '/');
+					if (namespace.equals("minecraft") && !inNamespace.startsWith("atlases/") && !inNamespace.startsWith("lang/")) {
+						Identifier id = Identifier.tryBuild("minecraft", inNamespace);
+						if (id == null || vanilla.getResource(PackType.CLIENT_RESOURCES, id) != null) {
+							vanillaSkipped++;
+							continue;
+						}
 					}
 					Path out = target.resolve(relative.toString());
 					if (!out.normalize().startsWith(target)) {
@@ -107,15 +129,30 @@ public final class AssetPacks {
 					}
 					Files.createDirectories(out.getParent());
 					Files.copy(file, out, StandardCopyOption.REPLACE_EXISTING);
+					namespaces.add(namespace);
+					copied++;
 				}
 			}
 		}
-		namespaces.remove("minecraft");
 		for (String namespace : namespaces) {
 			addItemDefinitions(target.resolve("assets").resolve(namespace), namespace);
 		}
-		MimicClient.LOGGER.info("[Assets] Imported {} (namespaces {}) into {}", jar.getFileName(), namespaces, target);
-		return namespaces;
+		JsonObject info = new JsonObject();
+		info.addProperty("jar", jar.getFileName().toString());
+		info.addProperty("for", forMod);
+		write(target.resolve(IMPORT_INFO), info.toString());
+		MimicClient.LOGGER.info("[Assets] Imported {} for {}: {} files in {}, {} vanilla files left alone", jar.getFileName(), forMod,
+			copied, namespaces, vanillaSkipped);
+		return new ImportResult(namespaces, copied, vanillaSkipped);
+	}
+
+	/** The mod a jar folder was imported for (from its Server mods page), or null. */
+	private static String importedFor(Path dir) {
+		try {
+			return JsonParser.parseString(Files.readString(dir.resolve(IMPORT_INFO))).getAsJsonObject().get("for").getAsString();
+		} catch (IOException | RuntimeException e) {
+			return null;
+		}
 	}
 
 	/**
@@ -208,21 +245,33 @@ public final class AssetPacks {
 		}
 	}
 
-	/** Imported asset files of one namespace by kind (textures, models, blockstates...), over all jars. */
-	public static Map<String, Integer> importedCounts(String namespace) {
+	/**
+	 * Imported asset files for a mod by kind (textures, models, blockstates...): its namespace in any jar,
+	 * plus everything in jars imported from its page (some mods keep their assets in another namespace).
+	 */
+	public static Map<String, Integer> importedCounts(String mod) {
 		Map<String, Integer> counts = new java.util.TreeMap<>();
 		for (Path dir : packFolders()) {
 			if (dir.equals(USER)) {
 				continue;
 			}
-			Path ns = dir.resolve("assets").resolve(namespace);
-			if (!Files.isDirectory(ns)) {
-				continue;
+			List<Path> roots = new ArrayList<>();
+			if (mod.equals(importedFor(dir))) {
+				try (Stream<Path> list = Files.list(dir.resolve("assets"))) {
+					list.forEach(roots::add);
+				} catch (IOException ignored) {
+					// No assets folder.
+				}
+			} else if (Files.isDirectory(dir.resolve("assets").resolve(mod))) {
+				roots.add(dir.resolve("assets").resolve(mod));
 			}
-			try (Stream<Path> files = Files.walk(ns)) {
-				files.filter(Files::isRegularFile).forEach(f -> counts.merge(ns.relativize(f).getName(0).toString(), 1, Integer::sum));
-			} catch (IOException ignored) {
-				// Unreadable folder: counted as nothing.
+			for (Path ns : roots) {
+				try (Stream<Path> files = Files.walk(ns)) {
+					files.filter(Files::isRegularFile).filter(f -> ns.relativize(f).getNameCount() > 1)
+						.forEach(f -> counts.merge(ns.relativize(f).getName(0).toString(), 1, Integer::sum));
+				} catch (IOException ignored) {
+					// Unreadable folder: counted as nothing.
+				}
 			}
 		}
 		return counts;

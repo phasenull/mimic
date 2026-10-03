@@ -107,9 +107,6 @@ public final class Placeholders {
 	/** {@link #registerFromAssets} for every imported jar (at startup). */
 	public static void registerAllImported() {
 		for (String namespace : AssetPacks.importedNamespaces()) {
-			if (namespace.equals("minecraft")) {
-				continue;
-			}
 			int[] added = registerFromAssets(namespace);
 			MimicClient.LOGGER.info("[Placeholder] {}: registered {} blocks and {} items from the imported jar", namespace, added[0], added[1]);
 		}

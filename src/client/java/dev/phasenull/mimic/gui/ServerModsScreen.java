@@ -69,7 +69,7 @@ public final class ServerModsScreen {
 		rows.add(TextListScreen.Row.action("Import this mod's jar (assets only)...",
 			!counts.isEmpty() ? "Imported, import again to replace it (or drag the jar onto this window)"
 				: "Textures, models and block states from the jar. Its code is never loaded. Or drag the jar here.",
-			() -> FilePicker.pick("Mod jar", "jar", jar -> importJar(jar, () -> modScreen(grandParent, name, mod)))));
+			() -> FilePicker.pick("Mod jar", "jar", jar -> importJar(jar, name, () -> modScreen(grandParent, name, mod)))));
 		if (!counts.isEmpty()) {
 			int total = counts.values().stream().mapToInt(Integer::intValue).sum();
 			rows.add(TextListScreen.Row.text("Imported assets: " + total + " files", counts.entrySet().stream()
@@ -103,14 +103,15 @@ public final class ServerModsScreen {
 		TextListScreen screen = new TextListScreen(back, Component.literal(name), rows);
 		self[0] = screen.onFilesDropped(files -> files.stream()
 			.filter(p -> p.getFileName().toString().toLowerCase().endsWith(".jar")).findFirst()
-			.ifPresent(jar -> importJar(jar, () -> modScreen(grandParent, name, mod))));
+			.ifPresent(jar -> importJar(jar, name, () -> modScreen(grandParent, name, mod))));
 		return screen;
 	}
 
-	private static void importJar(Path jar, java.util.function.Supplier<Screen> reopen) {
+	private static void importJar(Path jar, String forMod, java.util.function.Supplier<Screen> reopen) {
 		Minecraft client = Minecraft.getInstance();
 		try {
-			Set<String> namespaces = AssetPacks.importJar(jar);
+			AssetPacks.ImportResult result = AssetPacks.importJar(jar, forMod);
+			Set<String> namespaces = result.namespaces();
 			int blocks = 0;
 			int items = 0;
 			for (String namespace : namespaces) {
@@ -118,8 +119,8 @@ public final class ServerModsScreen {
 				blocks += added[0];
 				items += added[1];
 			}
-			JoinStatus.info("[Assets] Imported {} ({}): {} new block and {} new item placeholders. Shapes of existing ones apply when you rejoin.",
-				jar.getFileName(), namespaces, blocks, items);
+			JoinStatus.info("[Assets] Imported {}: {} files ({}), {} vanilla files left alone, {} new block and {} new item placeholders",
+				jar.getFileName(), result.files(), namespaces, result.vanillaSkipped(), blocks, items);
 			client.reloadResourcePacks();
 		} catch (IOException e) {
 			MimicClient.LOGGER.warn("Could not import {}", jar, e);
