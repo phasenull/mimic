@@ -131,6 +131,11 @@ public final class Placeholders {
 			} else if (registry == BuiltInRegistries.ITEM) {
 				ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, id);
 				register(BuiltInRegistries.ITEM, key, () -> new PlaceholderItem(new Item.Properties().setId(key), id.toString()));
+			} else if (registry == BuiltInRegistries.SOUND_EVENT) {
+				// Plays when an imported jar's sounds.json defines it (silent otherwise), instead of the
+				// server's sound packets naming an id this client can't read.
+				register(BuiltInRegistries.SOUND_EVENT, ResourceKey.create(Registries.SOUND_EVENT, id),
+					() -> net.minecraft.sounds.SoundEvent.createVariableRangeEvent(id));
 			} else if (registry == BuiltInRegistries.ENTITY_TYPE) {
 				ResourceKey<EntityType<?>> key = ResourceKey.create(Registries.ENTITY_TYPE, id);
 				PlaceholderRenderers.add(register(BuiltInRegistries.ENTITY_TYPE, key,
@@ -155,7 +160,7 @@ public final class Placeholders {
 			Block block = register(BuiltInRegistries.BLOCK, key,
 				// No loot table: the server decides drops, and the game (or JEI, building vanilla data) requires
 				// every block that names one to have it.
-				() -> new PlaceholderBlock(BlockBehaviour.Properties.of().setId(key).strength(1.5f).noLootTable(), guess));
+				() -> new PlaceholderBlock(BlockBehaviour.Properties.of().setId(key).strength(1.5f).noLootTable().sound(SoundGuess.of(id)), guess));
 			for (BlockState state : block.getStateDefinition().getPossibleStates()) {
 				state.initCache();
 			}
@@ -167,12 +172,19 @@ public final class Placeholders {
 		}
 	}
 
+	/** Registries whose values make their own holder when constructed (blocks, items, entity types...). */
+	private static boolean intrusive(Registry<?> registry) {
+		return registry != BuiltInRegistries.SOUND_EVENT;
+	}
+
 	/** Opens the frozen registry just long enough to add one entry (the value's constructor needs it open too). */
 	@SuppressWarnings("unchecked")
 	private static <T, V extends T> V register(Registry<T> registry, ResourceKey<T> key, Supplier<V> factory) {
 		try {
 			FROZEN.set(registry, false);
-			INTRUSIVE.set(registry, new IdentityHashMap<>());
+			if (intrusive(registry)) {
+				INTRUSIVE.set(registry, new IdentityHashMap<>());
+			}
 			V value = factory.get();
 			Holder.Reference<T> holder = ((WritableRegistry<T>) registry).register(key, value, RegistrationInfo.BUILT_IN);
 			BIND_TAGS.invoke(holder, List.of());

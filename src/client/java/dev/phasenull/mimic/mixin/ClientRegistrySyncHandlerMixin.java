@@ -72,7 +72,7 @@ public abstract class ClientRegistrySyncHandlerMixin {
 					}
 					entries.put(entry.getKey(), entry.getIntValue());
 				} else if (Placeholders.ensure(local, entry.getKey())) {
-					// Server-only block/item/entity type: a placeholder now holds its id.
+					// Server-only block/item/entity type/sound: a placeholder now holds its id.
 					entries.put(entry.getKey(), entry.getIntValue());
 					placeholders++;
 				} else {
@@ -83,7 +83,7 @@ public abstract class ClientRegistrySyncHandlerMixin {
 			ViaPassthrough.synced(registryId);
 		}
 		if (placeholders > 0) {
-			JoinStatus.info("[Fabric] Registry sync: {} server-only blocks/items/entities got placeholders", placeholders);
+			JoinStatus.info("[Fabric] Registry sync: {} server-only blocks/items/entities/sounds got placeholders", placeholders);
 		}
 		if (droppedRegistries == 0 && droppedEntries == 0 && placeholders == 0 && keptClientNumbering == 0) {
 			return payload;
