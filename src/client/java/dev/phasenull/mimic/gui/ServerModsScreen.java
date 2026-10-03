@@ -98,7 +98,7 @@ public final class ServerModsScreen {
 		Minecraft client = Minecraft.getInstance();
 		try {
 			Set<String> namespaces = AssetPacks.importJar(jar);
-			JoinStatus.info("[Assets] Imported {} ({}). Block shapes from it apply after a restart.", jar.getFileName(), namespaces);
+			JoinStatus.info("[Assets] Imported {} ({}). Its block shapes apply when you rejoin.", jar.getFileName(), namespaces);
 			client.reloadResourcePacks();
 		} catch (IOException e) {
 			MimicClient.LOGGER.warn("Could not import {}", jar, e);

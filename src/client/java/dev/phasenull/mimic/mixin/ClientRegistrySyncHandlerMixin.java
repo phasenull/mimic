@@ -44,6 +44,9 @@ public abstract class ClientRegistrySyncHandlerMixin {
 			Object2IntMap<Identifier> entries = new Object2IntLinkedOpenHashMap<>();
 			for (Object2IntMap.Entry<Identifier> entry : registry.getValue().object2IntEntrySet()) {
 				if (local.containsKey(entry.getKey())) {
+					if (Placeholders.isPlaceholder(local, entry.getKey())) {
+						Placeholders.ensure(local, entry.getKey());
+					}
 					entries.put(entry.getKey(), entry.getIntValue());
 				} else if (Placeholders.ensure(local, entry.getKey())) {
 					// Server-only block/item/entity type: a placeholder now holds its id.

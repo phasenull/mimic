@@ -5,6 +5,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.Property;
 
+import java.lang.reflect.Field;
 import java.util.List;
 
 /**
@@ -16,7 +17,18 @@ public class PlaceholderBlock extends Block {
 	/** Properties for the block being constructed (the state definition is built inside Block's constructor). */
 	static final ThreadLocal<List<Property<?>>> PENDING = new ThreadLocal<>();
 
-	private final StateGuess guess;
+	private static final Field STATE_DEFINITION;
+
+	static {
+		try {
+			STATE_DEFINITION = Block.class.getDeclaredField("stateDefinition");
+			STATE_DEFINITION.setAccessible(true);
+		} catch (NoSuchFieldException e) {
+			throw new ExceptionInInitializerError(e);
+		}
+	}
+
+	private volatile StateGuess guess;
 
 	PlaceholderBlock(Properties properties, StateGuess guess) {
 		super(properties);
@@ -25,6 +37,33 @@ public class PlaceholderBlock extends Block {
 
 	public StateGuess guess() {
 		return guess;
+	}
+
+	/**
+	 * Gives this block a new set of states, e.g. after the mod's jar was imported, so the counts are right
+	 * without restarting. Only call it before the server's ids are applied (Fabric then renumbers all states).
+	 * Returns true if the states changed.
+	 */
+	boolean reshape(StateGuess newGuess) {
+		if (newGuess.properties().equals(guess.properties())) {
+			return false;
+		}
+		StateDefinition.Builder<Block, BlockState> builder = new StateDefinition.Builder<>(this);
+		if (!newGuess.properties().isEmpty()) {
+			builder.add(newGuess.properties().toArray(new Property<?>[0]));
+		}
+		StateDefinition<Block, BlockState> definition = builder.create(Block::defaultBlockState, BlockState::new);
+		try {
+			STATE_DEFINITION.set(this, definition);
+		} catch (IllegalAccessException e) {
+			throw new IllegalStateException(e);
+		}
+		registerDefaultState(definition.any());
+		for (BlockState state : definition.getPossibleStates()) {
+			state.initCache();
+		}
+		guess = newGuess;
+		return true;
 	}
 
 	@Override

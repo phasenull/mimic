@@ -85,6 +85,13 @@ public final class Placeholders {
 	/** Registers a placeholder for {@code id} in {@code registry} if it's one Mimic can stand in for. */
 	public static boolean ensure(Registry<?> registry, Identifier id) {
 		if (registry.containsKey(id)) {
+			// A jar imported since this placeholder was made may know its real states.
+			if (registry == BuiltInRegistries.BLOCK && BuiltInRegistries.BLOCK.getValue(id) instanceof PlaceholderBlock block) {
+				StateGuess guess = StateGuess.of(id);
+				if (block.reshape(guess)) {
+					JoinStatus.info("[Placeholder] {}: now {} states, {}", id, guess.states(), guess.source());
+				}
+			}
 			return true;
 		}
 		try {
