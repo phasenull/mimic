@@ -6,6 +6,7 @@ import dev.phasenull.mimic.bypass.neoforge.NeoForgeBypass;
 import dev.phasenull.mimic.command.MimicCommand;
 import dev.phasenull.mimic.debug.ConnectionOverlay;
 import dev.phasenull.mimic.debug.CopyLogsButton;
+import dev.phasenull.mimic.debug.ComponentTooltip;
 import dev.phasenull.mimic.debug.FailedServers;
 import dev.phasenull.mimic.debug.PacketFeed;
 import dev.phasenull.mimic.placeholder.PlaceholderHud;
@@ -29,6 +30,7 @@ public class MimicClient implements ClientModInitializer {
 		FailedServers.register();
 		PlaceholderHud.register();
 		PacketFeed.register();
+		ComponentTooltip.register();
 		JoinScreenExtras.register();
 		RetryLoop.register();
 		HotReloadNotifier.start();
