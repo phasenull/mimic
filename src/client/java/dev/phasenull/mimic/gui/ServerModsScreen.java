@@ -72,6 +72,9 @@ public final class ServerModsScreen {
 			!counts.isEmpty() ? "Imported, import again to replace it (or drag the jar onto this window)"
 				: "Textures, models and block states from the jar. Its code is never loaded. Or drag the jar here.",
 			() -> FilePicker.pick("Mod jar", "jar", jar -> importJar(jar, name, () -> modScreen(grandParent, name, mod)))));
+		rows.add(TextListScreen.Row.action("Find this mod's jar on Modrinth...",
+			"Asks first, then downloads it and imports its assets (code is never run)",
+			() -> modrinth(name, () -> modScreen(grandParent, name, mod))));
 		for (dev.phasenull.mimic.assets.JarScanner.Report report : AssetPacks.scanReports(name)) {
 			rows.add(TextListScreen.Row.link("Safety scan of " + report.jar() + ": " + report.summary(),
 				report.classes() + " classes read as data, nothing run", () -> scanScreen(self[0], report)));
@@ -141,6 +144,63 @@ public final class ServerModsScreen {
 			JoinStatus.info("[Assets] Could not import {}: {}", jar.getFileName(), e.getMessage());
 		}
 		client.gui.setScreen(reopen.get());
+	}
+
+	private static void modrinth(String mod, java.util.function.Supplier<Screen> back) {
+		Minecraft client = Minecraft.getInstance();
+		client.gui.setScreen(message(back.get(), "Modrinth", "Looking up " + mod + " on Modrinth..."));
+		dev.phasenull.mimic.assets.ModrinthFetcher.find(mod, JoinSession.kind()).whenComplete((found, error) -> client.execute(() -> {
+			if (error != null) {
+				client.gui.setScreen(message(back.get(), "Modrinth", "Couldn't reach Modrinth: " + rootMessage(error)));
+			} else if (found == null) {
+				client.gui.setScreen(message(back.get(), "Modrinth", "Nothing on Modrinth for " + mod + " (" + JoinSession.kind() + "). Import the jar by hand instead."));
+			} else {
+				client.gui.setScreen(confirmDownload(mod, found, back));
+			}
+		}));
+	}
+
+	private static Screen confirmDownload(String mod, dev.phasenull.mimic.assets.ModrinthFetcher.Found found, java.util.function.Supplier<Screen> back) {
+		List<TextListScreen.Row> rows = new ArrayList<>();
+		rows.add(TextListScreen.Row.header(found.project() + " " + found.version()));
+		rows.add(TextListScreen.Row.text("File: " + found.fileName() + " (" + String.format("%.1f MB", found.size() / 1048576.0) + ")",
+			"For " + String.join(", ", found.loaders()) + " on " + String.join(", ", found.gameVersions())));
+		if (!found.exactVersion()) {
+			rows.add(TextListScreen.Row.text("No release for the server's exact version; this is the newest one.",
+				"Block states or assets may differ from the server's copy."));
+		}
+		rows.add(TextListScreen.Row.text("Downloaded from cdn.modrinth.com and checked against Modrinth's hash.",
+			"Only assets and data are copied, it's scanned for malware signs, and the jar is deleted after import."));
+		rows.add(TextListScreen.Row.action("Download and import", "modrinth.com/mod/" + found.slug(), () -> {
+			Minecraft client = Minecraft.getInstance();
+			client.gui.setScreen(message(back.get(), "Modrinth", "Downloading " + found.fileName() + "..."));
+			dev.phasenull.mimic.assets.ModrinthFetcher.download(found).whenComplete((file, error) -> client.execute(() -> {
+				if (error != null) {
+					client.gui.setScreen(message(back.get(), "Modrinth", "Download failed: " + rootMessage(error)));
+					return;
+				}
+				importJar(file, mod, back);
+				try {
+					java.nio.file.Files.deleteIfExists(file);
+				} catch (IOException e) {
+					MimicClient.LOGGER.warn("Could not delete {}", file, e);
+				}
+			}));
+		}));
+		rows.add(TextListScreen.Row.link("Cancel", null, back));
+		return new TextListScreen(back.get(), Component.literal("Download from Modrinth?"), rows);
+	}
+
+	private static Screen message(Screen back, String title, String text) {
+		return new TextListScreen(back, Component.literal(title), List.of(TextListScreen.Row.text(text)));
+	}
+
+	private static String rootMessage(Throwable error) {
+		Throwable root = error;
+		while (root.getCause() != null && root.getCause() != root) {
+			root = root.getCause();
+		}
+		return root.getMessage() == null ? root.toString() : root.getMessage();
 	}
 
 	private static void scanOnly(Path jar, Screen back) {
