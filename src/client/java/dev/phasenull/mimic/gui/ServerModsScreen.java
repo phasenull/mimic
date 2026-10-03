@@ -35,19 +35,26 @@ public final class ServerModsScreen {
 				() -> skippedScreen(parent)));
 		}
 
-		mods.forEach((name, mod) -> rows.add(TextListScreen.Row.link(name, summary(mod), () -> modScreen(parent, name, mod))));
+		mods.forEach((name, mod) -> rows.add(TextListScreen.Row.link(name, summary(name, mod), () -> modScreen(parent, name, mod))));
 		if (mods.isEmpty()) {
 			rows.add(TextListScreen.Row.text("Nothing recorded yet. Join a server first."));
 		}
 		return new TextListScreen(parent, Component.literal("Server mods: " + JoinSession.server()), rows);
 	}
 
-	private static String summary(JoinSession.Mod mod) {
+	private static List<String> parts(JoinSession.Mod mod) {
 		List<String> parts = new ArrayList<>();
 		if (!mod.channels.isEmpty()) parts.add(mod.channels.size() + " channels");
 		if (mod.knownCount() > 0) parts.add(mod.knownCount() + " shared entries");
 		if (mod.unknownCount() > 0) parts.add(mod.unknownCount() + " server-only entries");
 		if (!mod.standIns.isEmpty()) parts.add(mod.standIns.size() + " stand-ins");
+		return parts;
+	}
+
+	private static String summary(String name, JoinSession.Mod mod) {
+		List<String> parts = parts(mod);
+		int assets = AssetPacks.importedCounts(name).values().stream().mapToInt(Integer::intValue).sum();
+		if (assets > 0) parts.add(assets + " imported assets");
 		return parts.isEmpty() ? "seen" : String.join(" | ", parts);
 	}
 
@@ -57,11 +64,16 @@ public final class ServerModsScreen {
 		Screen back = create(grandParent);
 		Screen[] self = new Screen[1];
 		List<TextListScreen.Row> rows = new ArrayList<>();
-		boolean imported = AssetPacks.importedNamespaces().contains(name);
+		Map<String, Integer> counts = AssetPacks.importedCounts(name);
 		rows.add(TextListScreen.Row.action("Import this mod's jar (assets only)...",
-			imported ? "Imported. Import again to replace it. Or drag the jar onto this window."
+			!counts.isEmpty() ? "Imported, import again to replace it (or drag the jar onto this window)"
 				: "Textures, models and block states from the jar. Its code is never loaded. Or drag the jar here.",
 			() -> FilePicker.pick("Mod jar", "jar", jar -> importJar(jar, () -> modScreen(grandParent, name, mod)))));
+		if (!counts.isEmpty()) {
+			int total = counts.values().stream().mapToInt(Integer::intValue).sum();
+			rows.add(TextListScreen.Row.text("Imported assets: " + total + " files", counts.entrySet().stream()
+				.map(e -> e.getValue() + " " + e.getKey()).collect(java.util.stream.Collectors.joining(", "))));
+		}
 		if (!mod.standIns.isEmpty()) {
 			rows.add(TextListScreen.Row.header("Stand-ins (" + mod.standIns.size() + "): replaced by a vanilla value"));
 			mod.standIns.forEach(s -> rows.add(TextListScreen.Row.text(s)));

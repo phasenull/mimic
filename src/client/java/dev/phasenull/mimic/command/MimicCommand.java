@@ -19,11 +19,19 @@ public final class MimicCommand {
 				.then(ClientCommands.literal("mods").executes(ctx -> {
 					ModCache cache = ModCache.get();
 					synchronized (cache) {
-						if (cache.mods.isEmpty()) {
-							ctx.getSource().sendFeedback(Component.literal("No mods seen yet."));
+						// Mods only seen by a network channel have nothing to list.
+						var listed = cache.mods.entrySet().stream()
+							.filter(e -> !e.getValue().items.isEmpty() || !e.getValue().blocks.isEmpty() || !e.getValue().entities.isEmpty())
+							.toList();
+						if (listed.isEmpty()) {
+							ctx.getSource().sendFeedback(Component.literal("No mod items, blocks or entities seen yet."));
 						}
-						cache.mods.forEach((key, mod) -> ctx.getSource().sendFeedback(Component.literal(
-							key + "  items=" + mod.items.size() + " blocks=" + mod.blocks.size())));
+						listed.forEach(e -> ctx.getSource().sendFeedback(Component.literal(e.getKey() + "  items=" + e.getValue().items.size()
+							+ " blocks=" + e.getValue().blocks.size() + " entities=" + e.getValue().entities.size())));
+						int hidden = cache.mods.size() - listed.size();
+						if (hidden > 0) {
+							ctx.getSource().sendFeedback(Component.literal(hidden + " more seen with nothing to list (channels only)"));
+						}
 					}
 					return 1;
 				}))

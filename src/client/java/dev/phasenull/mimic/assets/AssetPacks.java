@@ -111,6 +111,9 @@ public final class AssetPacks {
 			}
 		}
 		namespaces.remove("minecraft");
+		for (String namespace : namespaces) {
+			addItemDefinitions(target.resolve("assets").resolve(namespace), namespace);
+		}
 		MimicClient.LOGGER.info("[Assets] Imported {} (namespaces {}) into {}", jar.getFileName(), namespaces, target);
 		return namespaces;
 	}
@@ -180,6 +183,49 @@ public final class AssetPacks {
 				return Optional.empty();
 			}
 		});
+	}
+
+	/**
+	 * Jars made before item model definitions existed (Minecraft 1.21.4) only have models/item/*.json; the
+	 * game now needs items/*.json to point at them.
+	 */
+	private static void addItemDefinitions(Path namespaceDir, String namespace) throws IOException {
+		Path models = namespaceDir.resolve("models").resolve("item");
+		if (!Files.isDirectory(models)) {
+			return;
+		}
+		try (Stream<Path> files = Files.walk(models)) {
+			for (Path model : (Iterable<Path>) files::iterator) {
+				if (!model.getFileName().toString().endsWith(".json")) {
+					continue;
+				}
+				String path = models.relativize(model).toString().replace('\\', '/').replaceAll("\\.json$", "");
+				Path definition = namespaceDir.resolve("items").resolve(path + ".json");
+				if (!Files.exists(definition)) {
+					write(definition, "{\"model\":{\"type\":\"minecraft:model\",\"model\":\"" + namespace + ":item/" + path + "\"}}");
+				}
+			}
+		}
+	}
+
+	/** Imported asset files of one namespace by kind (textures, models, blockstates...), over all jars. */
+	public static Map<String, Integer> importedCounts(String namespace) {
+		Map<String, Integer> counts = new java.util.TreeMap<>();
+		for (Path dir : packFolders()) {
+			if (dir.equals(USER)) {
+				continue;
+			}
+			Path ns = dir.resolve("assets").resolve(namespace);
+			if (!Files.isDirectory(ns)) {
+				continue;
+			}
+			try (Stream<Path> files = Files.walk(ns)) {
+				files.filter(Files::isRegularFile).forEach(f -> counts.merge(ns.relativize(f).getName(0).toString(), 1, Integer::sum));
+			} catch (IOException ignored) {
+				// Unreadable folder: counted as nothing.
+			}
+		}
+		return counts;
 	}
 
 	/** Namespaces with assets in any imported jar. */
