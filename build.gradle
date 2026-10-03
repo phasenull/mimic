@@ -41,9 +41,10 @@ dependencies {
 	// Optional JEI support, never bundled; Mimic's plugin only loads when JEI is installed. Compiled against
 	// the full JEI jar (it contains the API) and run with that same jar in the dev client: separate API jars
 	// end up on the IDE's launch classpath next to JEI's own copy, and the plugin then can't be cast.
-	// Not transitive: the jar already contains JEI's own libraries (and mezz_config as a nested jar).
-	compileOnly("mezz.jei:jei-${project.minecraft_version}-fabric:${project.jei_version}") { transitive = false }
-	localRuntime("mezz.jei:jei-${project.minecraft_version}-fabric:${project.jei_version}") { transitive = false }
+	// "@jar" takes the published jar itself: it shades JEI's libraries and nests mezz_config. Without it,
+	// Gradle's module metadata picks the "-unshaded" variant, whose search index then fails to load.
+	compileOnly("mezz.jei:jei-${project.minecraft_version}-fabric:${project.jei_version}@jar")
+	localRuntime("mezz.jei:jei-${project.minecraft_version}-fabric:${project.jei_version}@jar")
 
 	// Dev client only: protocol translation so the test client can join older servers.
 	runtimeOnly "maven.modrinth:viafabricplus:${project.viafabricplus_version}"
