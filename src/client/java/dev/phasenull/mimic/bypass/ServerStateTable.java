@@ -151,7 +151,7 @@ public final class ServerStateTable {
 	}
 
 	/** Via protocols from the server's version to this one, in the order a clientbound packet goes through. */
-	private static List<Object> clientboundProtocols() throws ReflectiveOperationException {
+	static List<Object> clientboundProtocols() throws ReflectiveOperationException {
 		Object connection = ConnectionDebug.trackedConnection();
 		if (connection == null) {
 			return List.of();
@@ -326,7 +326,7 @@ public final class ServerStateTable {
 			serverStates, serverOrder.size(), fromVia);
 	}
 
-	private static Object mappingData(Object protocol) throws ReflectiveOperationException {
+	static Object mappingData(Object protocol) throws ReflectiveOperationException {
 		return method(protocol, "getMappingData").invoke(protocol);
 	}
 
@@ -343,7 +343,7 @@ public final class ServerStateTable {
 	}
 
 	/** A public method by name, looked up on the object's interfaces too (Via's implementations are internal). */
-	private static Method method(Object target, String name, Class<?>... params) throws NoSuchMethodException {
+	static Method method(Object target, String name, Class<?>... params) throws NoSuchMethodException {
 		for (Class<?> type = target.getClass(); type != null; type = type.getSuperclass()) {
 			for (Class<?> iface : type.getInterfaces()) {
 				try {

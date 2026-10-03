@@ -40,5 +40,6 @@ public abstract class ConnectScreenMixin {
 		dev.phasenull.mimic.debug.SoundLog.reset();
 		LoginQueryAnswers.reload(data);
 		NeoForgeBypass.onConnecting(address, data);
+		dev.phasenull.mimic.bypass.forge.ForgeBypass.onConnecting(address, data);
 	}
 }

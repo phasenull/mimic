@@ -68,6 +68,7 @@ public final class ForgeBypass {
 		}
 		server = key;
 		serverData = data;
+		ForgeTable.reset();
 	}
 
 	/** The host to put in the handshake packet: unchanged unless this server is known to run Forge. */
@@ -89,8 +90,18 @@ public final class ForgeBypass {
 		switch (index) {
 			case MOD_LIST -> replyToModList(in, reply);
 			case REGISTRY -> {
-				JoinStatus.info("[Forge] Registry {}", in.readUtf());
+				Identifier name = in.readIdentifier();
+				Map<Identifier, Integer> ids = in.readBoolean() ? snapshotIds(in) : Map.of();
 				reply.writeByte(ACK);
+				FriendlyByteBuf wrapped = wrap(reply);
+				if (ids.isEmpty()) {
+					return CompletableFuture.completedFuture(wrapped);
+				}
+				// Placeholders are registered on the client thread; the server waits for the answer.
+				return CompletableFuture.supplyAsync(() -> {
+					ForgeTable.registry(name, ids);
+					return wrapped;
+				}, Minecraft.getInstance());
 			}
 			case CONFIG -> {
 				JoinStatus.info("[Forge] Config {}", in.readUtf());
@@ -111,6 +122,19 @@ public final class ForgeBypass {
 			}
 		}
 		return CompletableFuture.completedFuture(wrap(reply));
+	}
+
+	/**
+	 * A registry snapshot's ids (ForgeRegistry.Snapshot): ids, then aliases, overrides, blocked ids and
+	 * dummied entries, which only need skipping.
+	 */
+	private static Map<Identifier, Integer> snapshotIds(FriendlyByteBuf in) {
+		Map<Identifier, Integer> ids = new LinkedHashMap<>();
+		int count = in.readVarInt();
+		for (int i = 0; i < count; i++) {
+			ids.put(in.readIdentifier(), in.readVarInt());
+		}
+		return ids;
 	}
 
 	/** Claims exactly the server's mods and channels; the registry map is not checked by the server. */

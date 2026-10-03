@@ -11,6 +11,23 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Pseudo
 @Mixin(targets = "com.viaversion.viaversion.api.data.MappingDataBase", remap = false)
 public abstract class MappingDataBaseMixin {
+	/** Legacy Forge servers: their mods' block states and items, mapped to placeholders (see ForgeTable). */
+	@Inject(method = "getNewBlockStateId", at = @At("HEAD"), cancellable = true)
+	private void mimic$forgeStates(int id, CallbackInfoReturnable<Integer> cir) {
+		Integer mapped = dev.phasenull.mimic.bypass.forge.ForgeTable.state(this, id);
+		if (mapped != null) {
+			cir.setReturnValue(mapped);
+		}
+	}
+
+	@Inject(method = "getNewItemId", at = @At("HEAD"), cancellable = true)
+	private void mimic$forgeItems(int id, CallbackInfoReturnable<Integer> cir) {
+		Integer mapped = dev.phasenull.mimic.bypass.forge.ForgeTable.item(this, id);
+		if (mapped != null) {
+			cir.setReturnValue(mapped);
+		}
+	}
+
 	@Inject(method = {"getNewBlockStateId", "getNewBlockId", "getOldBlockId"}, at = @At("HEAD"), cancellable = true)
 	private void mimic$blocks(int id, CallbackInfoReturnable<Integer> cir) {
 		if (ViaPassthrough.active("minecraft:block")) {

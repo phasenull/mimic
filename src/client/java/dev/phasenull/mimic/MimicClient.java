@@ -41,6 +41,7 @@ public class MimicClient implements ClientModInitializer {
 		RetryLoop.register();
 		HotReloadNotifier.start();
 		NeoForgeBypass.register();
+		dev.phasenull.mimic.bypass.forge.ForgeBypass.register();
 		LoginQueryAnswers.registerReconnect();
 		LOGGER.info("Mimic loaded");
 	}
