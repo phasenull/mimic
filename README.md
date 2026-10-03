@@ -2,6 +2,18 @@
 
 Join modded servers without installing their mods.
 
+## Why
+
+Small modded SMPs pop up all the time, and most don't last more than a couple of weeks. Joining one usually
+means downloading a pile of mods from wherever the server links them, and every one of those jars is code
+running on your computer with full access to it. Malicious mods that steal accounts, browser sessions and
+files are a real and recurring problem.
+
+For a server that runs a few item, block or decoration mods, that risk isn't worth it. Mimic lets you join
+anyway: you see the world, play with the vanilla parts, and see the modded content as placeholders. If you
+want the modded blocks and items to look right, Mimic can read their textures, models and sounds from the
+mod jars without ever loading the code inside them.
+
 Mimic is a client-side Fabric mod for Minecraft 26.3. When a server runs mods you don't have, the vanilla
 client (and Fabric API) refuse to join: unknown registry entries, unknown network channels, mod handshakes.
 Mimic answers those checks, fills the gaps with stand-ins, and gets you into the world.
