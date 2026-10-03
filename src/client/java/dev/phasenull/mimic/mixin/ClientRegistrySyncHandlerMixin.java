@@ -45,6 +45,10 @@ public abstract class ClientRegistrySyncHandlerMixin {
 		int placeholders = 0;
 		int keptClientNumbering = 0;
 		JoinSession.kind("Fabric");
+		Object2IntMap<Identifier> serverItems = payload.registryMap().get(Identifier.withDefaultNamespace("item"));
+		if (serverItems != null) {
+			ViaPassthrough.serverItems(serverItems.keySet());
+		}
 		Object2IntMap<Identifier> serverBlocks = payload.registryMap().get(Identifier.withDefaultNamespace("block"));
 		ServerStateTable.applying(true, serverBlocks == null ? java.util.Set.of() : new java.util.HashSet<>(serverBlocks.keySet()));
 		Placeholders.ensureUnknownBlock();

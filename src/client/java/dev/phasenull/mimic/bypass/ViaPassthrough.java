@@ -12,11 +12,23 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class ViaPassthrough {
 	private static final Set<String> SYNCED = ConcurrentHashMap.newKeySet();
+	/** Items the server listed in its registry sync (it has them, whatever its version). */
+	private static final Set<net.minecraft.resources.Identifier> SERVER_ITEMS = ConcurrentHashMap.newKeySet();
 
 	private ViaPassthrough() {}
 
 	public static void reset() {
 		SYNCED.clear();
+		SERVER_ITEMS.clear();
+	}
+
+	public static void serverItems(java.util.Collection<net.minecraft.resources.Identifier> items) {
+		SERVER_ITEMS.addAll(items);
+	}
+
+	/** True when the server listed this item, e.g. one a backport mod adds to an older version. */
+	public static boolean serverHasItem(net.minecraft.resources.Identifier item) {
+		return SERVER_ITEMS.contains(item);
 	}
 
 	public static void synced(String registry) {
