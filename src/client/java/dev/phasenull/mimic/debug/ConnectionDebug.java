@@ -155,6 +155,7 @@ public final class ConnectionDebug {
 	public static void disconnected(String reason) {
 		lastDisconnectReason = reason;
 		event("DISCONNECT", reason);
+		FailedServers.disconnected(reason);
 		active = false;
 		synchronized (ConnectionDebug.class) {
 			close();

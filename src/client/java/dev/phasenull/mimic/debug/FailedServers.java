@@ -74,16 +74,25 @@ public final class FailedServers {
 		return (address.getHost() + ":" + address.getPort()).toLowerCase(Locale.ROOT);
 	}
 
+	/**
+	 * Called as the connection closes, while the server being joined is still known (by the time the
+	 * disconnect screen opens, a play-time disconnect has already cleared it).
+	 */
+	public static void disconnected(String reason) {
+		onDisconnect(reason);
+	}
+
 	private static synchronized void onDisconnect(String reason) {
 		ServerData data = JoinSession.serverData();
-		if (data == null || reason == null || MARKED_REASONS.stream().noneMatch(reason::contains)) {
+		String ip = data != null ? data.ip : JoinSession.server();
+		if (ip == null || reason == null || MARKED_REASONS.stream().noneMatch(reason::contains)) {
 			return;
 		}
 		Failure failure = new Failure();
 		failure.reason = reason.lines().findFirst().orElse(reason);
 		failure.build = MimicBuild.commit();
 		failure.at = System.currentTimeMillis();
-		failures.put(key(data.ip), failure);
+		failures.put(key(ip), failure);
 		save();
 	}
 

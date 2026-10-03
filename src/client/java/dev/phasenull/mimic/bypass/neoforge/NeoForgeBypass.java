@@ -83,11 +83,12 @@ public final class NeoForgeBypass {
 	/**
 	 * NeoForge's own channels that the server sends unasked: all optional, so a failure report never names
 	 * them, but sending on one the client didn't claim throws on the server. During login that throw is the
-	 * "Invalid player data" kick (e.g. data map sync right after the held-slot packet).
+	 * "Invalid player data" kick (e.g. data map sync right after the held-slot packet, or recipe_content right
+ * after update_recipes).
 	 */
 	private static final List<String> BUILTIN_CONFIGURATION_EXTRA = List.of("config_file");
 	private static final List<String> BUILTIN_PLAY = List.of("advanced_add_entity", "advanced_open_screen",
-		"auxiliary_light_data", "registry_data_map_sync", "advanced_container_set_data", "custom_time_packet", "sync_attachments");
+		"auxiliary_light_data", "registry_data_map_sync", "advanced_container_set_data", "custom_time_packet", "recipe_content", "sync_attachments");
 
 	private record Claim(CustomPacketPayload.Type<RawPayload> type, int flow) {}
 
