@@ -96,8 +96,16 @@ public class JarRecipeCategory implements IRecipeCategory<MockRecipes.Recipe> {
 			if (alternative.startsWith("#")) {
 				Identifier tag = Identifier.tryParse(alternative.substring(1));
 				if (tag != null) {
+					int before = stacks.size();
 					for (Holder<Item> holder : BuiltInRegistries.ITEM.getTagOrEmpty(TagKey.create(Registries.ITEM, tag))) {
 						stacks.add(new ItemStack(holder.value()));
+					}
+					if (stacks.size() == before) {
+						// The server didn't send this tag (or it's from another loader): guess from its name.
+						Item guess = guessTag(tag);
+						if (guess != null) {
+							stacks.add(new ItemStack(guess));
+						}
 					}
 				}
 			} else {
@@ -108,6 +116,49 @@ public class JarRecipeCategory implements IRecipeCategory<MockRecipes.Recipe> {
 			}
 		}
 		return stacks;
+	}
+
+	/**
+	 * An item named like a common convention tag: "c:dusts/redstone" or "c:redstone_dusts" -> redstone,
+	 * "c:ingots/iron" -> iron_ingot, "c:gems/diamond" -> diamond, "c:chests" -> chest.
+	 */
+	static Item guessTag(Identifier tag) {
+		String path = tag.getPath();
+		List<String> candidates = new ArrayList<>();
+		String[] parts = path.split("/");
+		if (parts.length >= 2) {
+			String group = singular(parts[parts.length - 2]);
+			String material = parts[parts.length - 1];
+			candidates.add(material + "_" + group);
+			candidates.add(material);
+			candidates.add(group + "_" + material);
+		} else {
+			int underscore = path.lastIndexOf('_');
+			if (underscore > 0) {
+				String material = path.substring(0, underscore);
+				String group = singular(path.substring(underscore + 1));
+				candidates.add(material + "_" + group);
+				candidates.add(material);
+			}
+			candidates.add(singular(path));
+		}
+		for (String candidate : candidates) {
+			Item item = item("minecraft:" + candidate);
+			if (item != null && item != net.minecraft.world.item.Items.AIR) {
+				return item;
+			}
+		}
+		return null;
+	}
+
+	private static String singular(String word) {
+		if (word.endsWith("ies")) {
+			return word.substring(0, word.length() - 3) + "y";
+		}
+		if (word.endsWith("es") && (word.endsWith("ches") || word.endsWith("shes") || word.endsWith("xes"))) {
+			return word.substring(0, word.length() - 2);
+		}
+		return word.endsWith("s") && !word.endsWith("ss") ? word.substring(0, word.length() - 1) : word;
 	}
 
 	private static Item item(String id) {
