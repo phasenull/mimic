@@ -152,7 +152,9 @@ public final class Placeholders {
 		PlaceholderBlock.PENDING.set(guess.properties());
 		try {
 			Block block = register(BuiltInRegistries.BLOCK, key,
-				() -> new PlaceholderBlock(BlockBehaviour.Properties.of().setId(key).strength(1.5f), guess));
+				// No loot table: the server decides drops, and the game (or JEI, building vanilla data) requires
+				// every block that names one to have it.
+				() -> new PlaceholderBlock(BlockBehaviour.Properties.of().setId(key).strength(1.5f).noLootTable(), guess));
 			for (BlockState state : block.getStateDefinition().getPossibleStates()) {
 				state.initCache();
 			}
