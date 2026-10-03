@@ -97,7 +97,14 @@ public final class NeoForgeChannelStore {
 		if (created) {
 			String ns = id.substring(0, Math.max(0, id.indexOf(':'))) + ":";
 			String version = list.stream().filter(c -> c.versionConfirmed && c.id.startsWith(ns)).map(c -> c.version).findFirst().orElse("1");
-			channel = new Channel(id, version, null);
+			// Another server that reported this channel knows its direction (fixed by the mod) and likely its
+			// version, which saves a reconnect for each.
+			Channel known = servers.entrySet().stream()
+				.filter(e -> !e.getKey().equals(server) && !e.getKey().equals(SEEN))
+				.flatMap(e -> e.getValue().stream())
+				.filter(c -> c.id.equals(id) && c.versionConfirmed)
+				.findFirst().orElse(null);
+			channel = new Channel(id, known != null && version.equals("1") ? known.version : version, known != null ? known.flow : null);
 			list.add(channel);
 		}
 		String oldVersion = channel.version;
