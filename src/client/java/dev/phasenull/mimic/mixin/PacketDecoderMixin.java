@@ -2,6 +2,7 @@ package dev.phasenull.mimic.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import dev.phasenull.mimic.MimicClient;
 import dev.phasenull.mimic.debug.ConnectionDebug;
 import dev.phasenull.mimic.debug.JoinSession;
 import dev.phasenull.mimic.debug.JoinStatus;
@@ -58,6 +59,20 @@ public abstract class PacketDecoderMixin {
 	 * In configuration only "unknown packet id" is skipped: when a proxy switches servers it can still send
 	 * play packets after start_configuration, which then arrive once the client reads configuration.
 	 */
+	/** The innermost cause, which says what actually failed (the outer message is just "Failed to decode"). */
+	@Unique
+	private static String rootCause(Throwable e) {
+		Throwable root = e;
+		while (root.getCause() != null && root.getCause() != root) {
+			root = root.getCause();
+		}
+		if (root == e) {
+			return "";
+		}
+		StackTraceElement top = root.getStackTrace().length > 0 ? root.getStackTrace()[0] : null;
+		return " <- " + root + (top == null ? "" : " at " + top.getClassName().substring(top.getClassName().lastIndexOf('.') + 1) + "." + top.getMethodName());
+	}
+
 	@WrapMethod(method = "decode")
 	private void mimic$skipUndecodable(ChannelHandlerContext ctx, ByteBuf in, List<Object> out, Operation<Void> original) {
 		ConnectionProtocol protocol = protocolInfo.id();
@@ -76,12 +91,13 @@ public abstract class PacketDecoderMixin {
 				throw e;
 			}
 			in.skipBytes(in.readableBytes());
-			ConnectionDebug.note("SKIP", size + " bytes: " + what);
+			ConnectionDebug.note("SKIP", size + " bytes: " + what + rootCause(e));
+			MimicClient.LOGGER.debug("[Play] Undecodable packet", e);
 			int quote = what.indexOf('\'');
 			int end = quote >= 0 ? what.indexOf('\'', quote + 1) : -1;
 			JoinSession.skipped(end > quote ? what.substring(quote + 1, end) : what.substring(0, Math.min(what.length(), 80)));
 			if (++mimic$skipped <= MAX_SKIP_MESSAGES) {
-				JoinStatus.info("[Play] Skipped a packet this client can't read: {}", what);
+				JoinStatus.info("[Play] Skipped a packet this client can't read: {}{}", what, rootCause(e));
 			}
 		}
 	}
