@@ -196,6 +196,9 @@ public final class ServerStateTable {
 		Set<BlockState> placed = new HashSet<>();
 		int id = 0;
 		int fromVia = 0;
+		Map<String, Integer> anchors = StateAnchors.current();
+		BlockState filler = dev.phasenull.mimic.placeholder.Placeholders.unknownState() != null
+			? dev.phasenull.mimic.placeholder.Placeholders.unknownState() : Blocks.AIR.defaultBlockState();
 		StringBuilder dump = new StringBuilder("# first-last block (states, where the states came from)").append(System.lineSeparator());
 		for (Block block : serverOrder) {
 			List<BlockState> states = vanilla.get(BuiltInRegistries.BLOCK.getKey(block).toString());
@@ -208,6 +211,18 @@ public final class ServerStateTable {
 				if (block instanceof dev.phasenull.mimic.placeholder.PlaceholderBlock placeholder) {
 					source = "placeholder, " + placeholder.guess().source();
 				}
+			}
+			Integer anchor = anchors.get(BuiltInRegistries.BLOCK.getKey(block).toString());
+			if (anchor != null && anchor != id) {
+				// Verified start: the blocks since the previous anchor have this many states more (gap) or fewer.
+				String note = anchor > id ? "gap of " + (anchor - id) + " states (earlier blocks counted too few)"
+					: "overlap of " + (id - anchor) + " states (earlier blocks counted too many)";
+				dump.append("# anchor ").append(BuiltInRegistries.BLOCK.getKey(block)).append(": ").append(note).append(System.lineSeparator());
+				JoinStatus.info("[States] Anchor {}: {}", BuiltInRegistries.BLOCK.getKey(block), note);
+				while (id < anchor) {
+					registry.addMapping(filler, id++);
+				}
+				id = anchor;
 			}
 			dump.append(id).append('-').append(id + states.size() - 1).append(' ').append(BuiltInRegistries.BLOCK.getKey(block))
 				.append(" (").append(states.size()).append(", ").append(source).append(')').append(System.lineSeparator());
