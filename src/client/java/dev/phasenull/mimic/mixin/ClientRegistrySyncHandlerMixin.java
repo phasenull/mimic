@@ -12,6 +12,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
@@ -25,12 +26,23 @@ import java.util.Map;
  */
 @Mixin(value = ClientRegistrySyncHandler.class, remap = false)
 public abstract class ClientRegistrySyncHandlerMixin {
+	/**
+	 * Registries left out of the sync, so the client keeps its own (vanilla) numbering. Data component types:
+	 * a server numbers its vanilla ones in vanilla order with mods' after them, which is what ViaVersion
+	 * expects when it translates item data from an older version; adopting the server's numbering instead
+	 * made Via's translated ids point at other components (a player head's profile read as banner patterns,
+	 * dropping the whole inventory). Server-only components can't be read either way.
+	 */
+	@Unique
+	private static final java.util.Set<String> KEEP_CLIENT_NUMBERING = java.util.Set.of("minecraft:data_component_type");
+
 	@ModifyVariable(method = "apply", at = @At("HEAD"), argsOnly = true)
 	private static RegistrySyncPayload mimic$dropUnknown(RegistrySyncPayload payload) {
 		Map<Identifier, Object2IntMap<Identifier>> kept = new LinkedHashMap<>();
 		int droppedRegistries = 0;
 		int droppedEntries = 0;
 		int placeholders = 0;
+		int keptClientNumbering = 0;
 		JoinSession.kind("Fabric");
 		Placeholders.ensureUnknownBlock();
 		for (Map.Entry<Identifier, Object2IntMap<Identifier>> registry : payload.registryMap().entrySet()) {
@@ -39,6 +51,10 @@ public abstract class ClientRegistrySyncHandlerMixin {
 			registry.getValue().keySet().forEach(id -> JoinSession.entry(registryId, id.toString(), local != null && Placeholders.hasReal(local, id)));
 			if (local == null) {
 				droppedRegistries++;
+				continue;
+			}
+			if (KEEP_CLIENT_NUMBERING.contains(registryId)) {
+				keptClientNumbering++;
 				continue;
 			}
 			Object2IntMap<Identifier> entries = new Object2IntLinkedOpenHashMap<>();
@@ -62,7 +78,7 @@ public abstract class ClientRegistrySyncHandlerMixin {
 		if (placeholders > 0) {
 			JoinStatus.info("[Fabric] Registry sync: {} server-only blocks/items/entities got placeholders", placeholders);
 		}
-		if (droppedRegistries == 0 && droppedEntries == 0 && placeholders == 0) {
+		if (droppedRegistries == 0 && droppedEntries == 0 && placeholders == 0 && keptClientNumbering == 0) {
 			return payload;
 		}
 		JoinStatus.info("[Fabric] Registry sync: skipped {} unknown registries and {} unknown entries", droppedRegistries, droppedEntries);
