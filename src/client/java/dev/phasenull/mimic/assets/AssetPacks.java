@@ -210,6 +210,7 @@ public final class AssetPacks {
 		scannedStates = null;
 		MockRecipes.invalidate();
 		dev.phasenull.mimic.placeholder.ModelShapes.clear();
+		dev.phasenull.mimic.placeholder.GeoModels.clear();
 		return new ImportResult(namespaces, copied, vanillaSkipped, scannedBlocks, recipes, scan);
 	}
 
