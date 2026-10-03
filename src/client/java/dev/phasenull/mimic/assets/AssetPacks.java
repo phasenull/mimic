@@ -86,10 +86,25 @@ public final class AssetPacks {
 	}
 
 	/** What an import copied: namespaces with files, files copied, and vanilla files left alone. */
-	public record ImportResult(Set<String> namespaces, int files, int vanillaSkipped, int scannedBlocks, int recipes) {}
+	public record ImportResult(Set<String> namespaces, int files, int vanillaSkipped, int scannedBlocks, int recipes, JarScanner.Report scan) {}
 
 	private static final String IMPORT_INFO = "mimic_import.json";
 	private static final String STATES_FILE = "mimic_states.json";
+	private static final String SCAN_FILE = "mimic_scan.json";
+
+	/** Safety scans of the jars imported for {@code mod} (from its page, or carrying its namespace). */
+	public static List<JarScanner.Report> scanReports(String mod) {
+		List<JarScanner.Report> reports = new ArrayList<>();
+		for (Path dir : jarFolders()) {
+			if (mod.equals(importedFor(dir)) || Files.isDirectory(dir.resolve("assets").resolve(mod))) {
+				JarScanner.Report report = JarScanner.load(dir.resolve(SCAN_FILE));
+				if (report != null) {
+					reports.add(report);
+				}
+			}
+		}
+		return reports;
+	}
 	private static volatile Map<String, List<BlockPropertyScanner.Prop>> scannedStates;
 
 	/** Block properties read from imported jars' classes ({@link BlockPropertyScanner}), by block id. */
@@ -176,6 +191,14 @@ public final class AssetPacks {
 			addItemDefinitions(target.resolve("assets").resolve(namespace), namespace);
 		}
 		ItemModelFallbacks.apply(target);
+		JarScanner.Report scan = null;
+		try {
+			scan = JarScanner.scan(jar);
+			JarScanner.save(scan, target.resolve(SCAN_FILE));
+			MimicClient.LOGGER.info("[Scan] {}: {}", jar.getFileName(), scan.summary());
+		} catch (IOException | RuntimeException e) {
+			MimicClient.LOGGER.warn("[Scan] Could not scan {}", jar.getFileName(), e);
+		}
 		JsonObject info = new JsonObject();
 		info.addProperty("jar", jar.getFileName().toString());
 		info.addProperty("for", forMod);
@@ -184,7 +207,7 @@ public final class AssetPacks {
 			copied, namespaces, vanillaSkipped);
 		scannedStates = null;
 		MockRecipes.invalidate();
-		return new ImportResult(namespaces, copied, vanillaSkipped, scannedBlocks, recipes);
+		return new ImportResult(namespaces, copied, vanillaSkipped, scannedBlocks, recipes, scan);
 	}
 
 	/** Recipe files (data/<ns>/recipe or recipes) as data: shown on item pages and in JEI, never used by the game. */

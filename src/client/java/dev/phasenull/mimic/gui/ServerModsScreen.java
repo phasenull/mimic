@@ -70,6 +70,13 @@ public final class ServerModsScreen {
 			!counts.isEmpty() ? "Imported, import again to replace it (or drag the jar onto this window)"
 				: "Textures, models and block states from the jar. Its code is never loaded. Or drag the jar here.",
 			() -> FilePicker.pick("Mod jar", "jar", jar -> importJar(jar, name, () -> modScreen(grandParent, name, mod)))));
+		for (dev.phasenull.mimic.assets.JarScanner.Report report : AssetPacks.scanReports(name)) {
+			rows.add(TextListScreen.Row.link("Safety scan of " + report.jar() + ": " + report.summary(),
+				report.classes() + " classes read as data, nothing run", () -> scanScreen(self[0], report)));
+		}
+		rows.add(TextListScreen.Row.action("Scan a jar for malware signs (without importing)...",
+			"Useful before installing a mod for real. Read as data only.",
+			() -> FilePicker.pick("Mod jar", "jar", jar -> scanOnly(jar, self[0]))));
 		if (!counts.isEmpty()) {
 			int total = counts.values().stream().mapToInt(Integer::intValue).sum();
 			rows.add(TextListScreen.Row.text("Imported assets: " + total + " files", counts.entrySet().stream()
@@ -121,12 +128,37 @@ public final class ServerModsScreen {
 			}
 			JoinStatus.info("[Assets] Imported {}: {} files ({}), {} vanilla files left alone, block properties of {} blocks read, {} recipes, {} new block and {} new item placeholders",
 				jar.getFileName(), result.files(), namespaces, result.vanillaSkipped(), result.scannedBlocks(), result.recipes(), blocks, items);
+			if (result.scan() != null && result.scan().count(dev.phasenull.mimic.assets.JarScanner.Severity.HIGH) > 0) {
+				// Importing is still safe (no code runs), but this jar shouldn't be installed as a mod.
+				JoinStatus.info("[Scan] Warning: {} looks suspicious ({}). Don't install it as a mod; see its page for details.",
+					jar.getFileName(), result.scan().summary());
+			}
 			client.reloadResourcePacks();
 		} catch (IOException e) {
 			MimicClient.LOGGER.warn("Could not import {}", jar, e);
 			JoinStatus.info("[Assets] Could not import {}: {}", jar.getFileName(), e.getMessage());
 		}
 		client.gui.setScreen(reopen.get());
+	}
+
+	private static void scanOnly(Path jar, Screen back) {
+		Minecraft client = Minecraft.getInstance();
+		try {
+			client.gui.setScreen(scanScreen(back, dev.phasenull.mimic.assets.JarScanner.scan(jar)));
+		} catch (IOException e) {
+			JoinStatus.info("[Scan] Could not read {}: {}", jar.getFileName(), e.getMessage());
+		}
+	}
+
+	private static Screen scanScreen(Screen back, dev.phasenull.mimic.assets.JarScanner.Report report) {
+		List<TextListScreen.Row> rows = new ArrayList<>();
+		rows.add(TextListScreen.Row.header(report.jar() + ": " + report.summary()));
+		rows.add(TextListScreen.Row.text(report.classes() + " classes and " + report.nestedJars() + " nested jars read as data; nothing was run.",
+			"A heuristic: a clean scan doesn't prove a jar is safe, and some findings are normal for mods."));
+		for (dev.phasenull.mimic.assets.JarScanner.Finding finding : report.findings()) {
+			rows.add(TextListScreen.Row.text(finding.severity() + ": " + finding.what(), String.join(", ", finding.where())));
+		}
+		return new TextListScreen(back, Component.literal("Safety scan"), rows);
 	}
 
 	private static Screen skippedScreen(Screen grandParent) {
