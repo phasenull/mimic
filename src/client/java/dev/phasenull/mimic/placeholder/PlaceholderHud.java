@@ -48,7 +48,7 @@ public final class PlaceholderHud {
 			BlockState state = client.level.getBlockState(pos);
 			if (dev.phasenull.mimic.debug.PacketFeed.enabled()) {
 				// Debug: the id this client reads for the block here (the server's number for it).
-				lines.add("state #" + net.minecraft.world.level.block.Block.getId(state) + ": " + state);
+				lines.add("state #" + dev.phasenull.mimic.bypass.ServerStateTable.serverId(state) + ": " + state);
 			}
 			if (state == Placeholders.unknownState()) {
 				lines.add("Unknown block");

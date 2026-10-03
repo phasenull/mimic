@@ -36,7 +36,16 @@ public final class MimicCommand {
 			return 0;
 		}
 		BlockState shown = client.level.getBlockState(hit.getBlockPos());
-		int id = Block.getId(shown);
+		if (shown == dev.phasenull.mimic.placeholder.Placeholders.unknownState()) {
+			source.sendError(Component.literal("This one fills a gap, so it has no single id to pin; verify a block next to it in the numbering instead"));
+			return 0;
+		}
+		int id = dev.phasenull.mimic.bypass.ServerStateTable.serverId(shown);
+		int serverStates = dev.phasenull.mimic.bypass.ServerStateTable.serverStates();
+		if (serverStates >= 0 && id >= serverStates) {
+			source.sendError(Component.literal("State #" + id + " is past the server's " + serverStates + " states; rejoin and try again"));
+			return 0;
+		}
 		Block block = shown.getBlock();
 		int first;
 		if (claimed == null) {
@@ -96,6 +105,16 @@ public final class MimicCommand {
 							ctx.getSource().sendFeedback(Component.literal("Moved " + block + " by " + by + " states. Rejoin to apply."));
 							return 1;
 						}))))
+				.then(ClientCommands.literal("unverify").then(ClientCommands.argument("block", StringArgumentType.greedyString())
+					.executes(ctx -> {
+						String block = StringArgumentType.getString(ctx, "block").trim();
+						if (!StateAnchors.remove(block)) {
+							ctx.getSource().sendError(Component.literal("No anchor for " + block + " on this server"));
+							return 0;
+						}
+						ctx.getSource().sendFeedback(Component.literal("Removed the anchor for " + block + ". Rejoin to apply."));
+						return 1;
+					})))
 				.then(ClientCommands.literal("anchors").executes(ctx -> {
 					Map<String, Integer> anchors = StateAnchors.current();
 					if (anchors.isEmpty()) {

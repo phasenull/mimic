@@ -57,6 +57,10 @@ public final class AssetPacks {
 			for (Path dir : packFolders()) {
 				String name = dir.getFileName().toString();
 				boolean user = dir.equals(USER);
+				if (!user) {
+					// Also fixes jars imported before this existed; cheap once they're rewritten.
+					ItemModelFallbacks.apply(dir);
+				}
 				Component title = Component.literal(user ? "Mimic: your textures" : "Mimic: " + name.substring(JAR_PREFIX.length()));
 				PackLocationInfo info = new PackLocationInfo("mimic/" + name, title, PackSource.BUILT_IN, Optional.empty());
 				Pack.Metadata metadata = new Pack.Metadata(Component.literal("Assets for server-only mod content"),
@@ -171,6 +175,7 @@ public final class AssetPacks {
 		for (String namespace : namespaces) {
 			addItemDefinitions(target.resolve("assets").resolve(namespace), namespace);
 		}
+		ItemModelFallbacks.apply(target);
 		JsonObject info = new JsonObject();
 		info.addProperty("jar", jar.getFileName().toString());
 		info.addProperty("for", forMod);

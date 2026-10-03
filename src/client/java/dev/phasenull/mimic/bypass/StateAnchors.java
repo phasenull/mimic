@@ -46,6 +46,15 @@ public final class StateAnchors {
 		return true;
 	}
 
+	public static synchronized boolean remove(String block) {
+		Map<String, Integer> server = anchors.get(JoinSession.server());
+		if (server == null || server.remove(block) == null) {
+			return false;
+		}
+		save();
+		return true;
+	}
+
 	public static synchronized void clear() {
 		anchors.remove(JoinSession.server());
 		save();

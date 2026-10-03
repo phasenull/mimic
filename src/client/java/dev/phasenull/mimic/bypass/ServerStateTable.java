@@ -40,6 +40,9 @@ public final class ServerStateTable {
 	/** Blocks the server listed in its registry sync. */
 	private static final Set<Identifier> SERVER_BLOCKS = Collections.synchronizedSet(new HashSet<>());
 	private static volatile boolean applying;
+	/** The table in use while connected (null otherwise), kept to rebuild it after a block is added or reshaped. */
+	private static volatile Map<String, List<BlockState>> installed;
+	private static volatile int serverStates = -1;
 
 	private ServerStateTable() {}
 
@@ -55,9 +58,20 @@ public final class ServerStateTable {
 				rebuild();
 			}
 		});
+		// A block registered while connected (a jar imported mid-game) makes Fabric append or renumber every
+		// state in this client's order; put the server's order back. Registered after Fabric's tracker too.
+		net.fabricmc.fabric.api.event.registry.RegistryEntryAddedCallback.event(BuiltInRegistries.BLOCK).register((rawId, id, block) -> {
+			if (!applying && installed != null) {
+				refresh();
+			}
+		});
 		// Applied by the time play starts; Fabric's renumbering on disconnect must stay its own.
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> applying = false);
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> applying = false);
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+			applying = false;
+			installed = null;
+			serverStates = -1;
+		});
 	}
 
 	/** Called around a server's registry ids being applied. */
@@ -80,9 +94,43 @@ public final class ServerStateTable {
 			}
 			Map<String, List<BlockState>> vanilla = serverVanillaStates(protocols);
 			install(vanilla);
+			installed = vanilla;
 		} catch (ReflectiveOperationException | RuntimeException e) {
 			MimicClient.LOGGER.warn("[States] Could not build the server's block-state table", e);
 		}
+	}
+
+	/** Rebuilds the table in use (after a placeholder block was added or got new states), if there is one. */
+	public static void refresh() {
+		Map<String, List<BlockState>> vanilla = installed;
+		if (vanilla == null) {
+			return;
+		}
+		try {
+			install(vanilla);
+		} catch (ReflectiveOperationException | RuntimeException e) {
+			MimicClient.LOGGER.warn("[States] Could not rebuild the server's block-state table", e);
+		}
+	}
+
+	/** States the server's table has while connected through it, else -1. */
+	public static int serverStates() {
+		return serverStates;
+	}
+
+	/**
+	 * The server's id of {@code state}: the lowest id it has in the table. (The client's own lookup gives the
+	 * last one, which for a state listed twice can be past the server's states.)
+	 */
+	public static int serverId(BlockState state) {
+		IdMapper<BlockState> registry = Block.BLOCK_STATE_REGISTRY;
+		int limit = serverStates >= 0 ? serverStates : registry.size();
+		for (int i = 0; i < limit; i++) {
+			if (registry.byId(i) == state) {
+				return i;
+			}
+		}
+		return Block.getId(state);
 	}
 
 	/** Via protocols from the server's version to this one, in the order a clientbound packet goes through. */
@@ -238,7 +286,7 @@ public final class ServerStateTable {
 		} catch (java.io.IOException e) {
 			MimicClient.LOGGER.warn("[States] Could not write the state table", e);
 		}
-		int serverStates = id;
+		serverStates = id;
 		// The client's other states (blocks the server doesn't have) after the server's.
 		for (Block block : BuiltInRegistries.BLOCK) {
 			for (BlockState state : block.getStateDefinition().getPossibleStates()) {
