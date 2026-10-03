@@ -295,7 +295,24 @@ public final class BlockPropertyScanner {
 			return new Prop(propName, values);
 		}
 		if (call.owner.endsWith("EnumProperty") && args.size() >= 2 && args.get(1) instanceof Type enumType) {
-			List<String> values = enumValues(enumType.getInternalName());
+			String enumClass = enumType.getInternalName();
+			List<String> values = enumValues(enumClass);
+			// create(name, Enum.class, A, B, C): only the listed constants, in that order (a monitor's
+			// orientation is UP, DOWN, NORTH, not all six directions).
+			List<String> listed = listedConstants(call, enumClass);
+			if (!listed.isEmpty()) {
+				List<String> constants = enumConstantNames(enumClass);
+				List<String> chosen = new ArrayList<>();
+				for (String constant : listed) {
+					int index = constants.indexOf(constant);
+					if (index >= 0 && index < values.size() && !chosen.contains(values.get(index))) {
+						chosen.add(values.get(index));
+					}
+				}
+				if (!chosen.isEmpty()) {
+					values = chosen;
+				}
+			}
 			return values.isEmpty() ? null : new Prop(propName, values);
 		}
 		return null;
@@ -313,6 +330,44 @@ public final class BlockPropertyScanner {
 			return op - Opcodes.ICONST_0;
 		}
 		return null;
+	}
+
+	/** Enum constants read (GETSTATIC) between the enum's class literal and the create call, in order. */
+	private static List<String> listedConstants(MethodInsnNode call, String enumClass) {
+		List<String> listed = new ArrayList<>();
+		for (AbstractInsnNode insn = call.getPrevious(); insn != null; insn = insn.getPrevious()) {
+			if (insn instanceof LdcInsnNode ldc && ldc.cst instanceof Type type && type.getInternalName().equals(enumClass)) {
+				break;
+			}
+			if (insn instanceof FieldInsnNode field && insn.getOpcode() == Opcodes.GETSTATIC && field.owner.equals(enumClass)
+					&& field.desc.equals("L" + enumClass + ";")) {
+				listed.add(0, field.name);
+			}
+		}
+		return listed;
+	}
+
+	/** The enum's constant names in declaration order. */
+	private List<String> enumConstantNames(String enumClass) {
+		List<String> names = new ArrayList<>();
+		ClassNode node = jarClasses.get(enumClass);
+		if (node != null) {
+			for (FieldNode field : node.fields) {
+				if ((field.access & Opcodes.ACC_ENUM) != 0) {
+					names.add(field.name);
+				}
+			}
+			return names;
+		}
+		try {
+			Class<?> type = Class.forName(enumClass.replace('/', '.'), false, BlockPropertyScanner.class.getClassLoader());
+			for (Object constant : type.getEnumConstants()) {
+				names.add(((Enum<?>) constant).name());
+			}
+		} catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+			MimicClient.LOGGER.debug("[Assets] Unknown enum {}", enumClass, e);
+		}
+		return names;
 	}
 
 	/** Enum constants, as the property names them: serialized names for game enums, lowercase names otherwise. */
