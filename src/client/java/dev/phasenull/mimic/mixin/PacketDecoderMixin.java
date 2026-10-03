@@ -71,6 +71,14 @@ public abstract class PacketDecoderMixin {
 		return " <- " + root + (top == null ? "" : " at " + top.getClassName().substring(top.getClassName().lastIndexOf('.') + 1) + "." + top.getMethodName());
 	}
 
+	@Unique
+	private static <T> void appendIds(StringBuilder out, net.minecraft.core.Registry<T> registry) {
+		out.append("# ").append(registry.key().identifier()).append(System.lineSeparator());
+		for (T value : registry) {
+			out.append(registry.getId(value)).append(' ').append(registry.getKey(value)).append(System.lineSeparator());
+		}
+	}
+
 	/** Raw bytes of the first few undecodable packets of each type, for working out what broke them. */
 	@Unique
 	private static void dump(String what, ByteBuf in, int start, int size, Exception e) {
@@ -91,15 +99,8 @@ public abstract class PacketDecoderMixin {
 			if (count == 1) {
 				// The ids those bytes use, as this client numbers them right now.
 				StringBuilder ids = new StringBuilder();
-				for (var registry : java.util.List.of(net.minecraft.core.registries.BuiltInRegistries.DATA_COMPONENT_TYPE,
-						net.minecraft.core.registries.BuiltInRegistries.ITEM)) {
-					ids.append("# ").append(registry.key().identifier()).append('
-');
-					for (var entry : registry.entrySet()) {
-						ids.append(registry.getId(entry.getValue())).append(' ').append(entry.getKey().identifier()).append('
-');
-					}
-				}
+				appendIds(ids, net.minecraft.core.registries.BuiltInRegistries.DATA_COMPONENT_TYPE);
+				appendIds(ids, net.minecraft.core.registries.BuiltInRegistries.ITEM);
 				java.nio.file.Files.writeString(dir.resolve(type + "-ids.txt"), ids);
 			}
 		} catch (java.io.IOException | RuntimeException ex) {
