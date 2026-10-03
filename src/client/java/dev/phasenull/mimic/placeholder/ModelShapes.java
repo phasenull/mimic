@@ -239,6 +239,18 @@ public final class ModelShapes {
 		if (fromPacks.isPresent()) {
 			return fromPacks.get();
 		}
+		if (id.getNamespace().equals("mimic")) {
+			// Mimic's own look-alike models (see BlockEntityLooks).
+			Optional<java.nio.file.Path> own = net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer("mimic")
+				.flatMap(c -> c.findPath("assets/mimic/models/" + id.getPath() + ".json"));
+			if (own.isPresent()) {
+				try {
+					return JsonParser.parseString(java.nio.file.Files.readString(own.get())).getAsJsonObject();
+				} catch (Exception e) {
+					return null;
+				}
+			}
+		}
 		IoSupplier<InputStream> vanilla = Minecraft.getInstance().getVanillaPackResources().fullResources()
 			.getResource(PackType.CLIENT_RESOURCES, id.withPath(p -> "models/" + p + ".json"));
 		if (vanilla == null) {

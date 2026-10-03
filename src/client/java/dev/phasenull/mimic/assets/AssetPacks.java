@@ -60,6 +60,7 @@ public final class AssetPacks {
 				if (!user) {
 					// Also fixes jars imported before this existed; cheap once they're rewritten.
 					ItemModelFallbacks.apply(dir);
+					BlockEntityLooks.apply(dir);
 				}
 				Component title = Component.literal(user ? "Mimic: your textures" : "Mimic: " + name.substring(JAR_PREFIX.length()));
 				PackLocationInfo info = new PackLocationInfo("mimic/" + name, title, PackSource.BUILT_IN, Optional.empty());
@@ -191,6 +192,7 @@ public final class AssetPacks {
 			addItemDefinitions(target.resolve("assets").resolve(namespace), namespace);
 		}
 		ItemModelFallbacks.apply(target);
+		BlockEntityLooks.apply(target);
 		JarScanner.Report scan = null;
 		try {
 			scan = JarScanner.scan(jar);

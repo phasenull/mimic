@@ -55,7 +55,7 @@ public final class ItemModelFallbacks {
 					JsonObject fixed = model(model);
 					if (!fixed.equals(model)) {
 						definition.add("model", fixed);
-						Files.writeString(file, new GsonBuilder().setPrettyPrinting().create().toJson(definition));
+						Files.writeString(file, new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(definition));
 						changed++;
 					}
 				} catch (IOException | RuntimeException e) {
@@ -99,7 +99,7 @@ public final class ItemModelFallbacks {
 				}
 			}
 			if (changed) {
-				Files.writeString(file, new GsonBuilder().setPrettyPrinting().create().toJson(definition));
+				Files.writeString(file, new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(definition));
 			}
 			return changed;
 		} catch (IOException | RuntimeException e) {
