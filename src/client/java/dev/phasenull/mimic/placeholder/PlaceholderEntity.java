@@ -11,7 +11,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
-/** Stands in for an entity only the server has: moves where the server says, drawn as its id and a shadow. */
+/** Stands in for an entity only the server has: moves where the server says; see PlaceholderEntityRenderer. */
 public class PlaceholderEntity extends Entity {
 	public PlaceholderEntity(EntityType<?> type, Level level) {
 		super(type, level);
@@ -24,6 +24,12 @@ public class PlaceholderEntity extends Entity {
 	@Override
 	public Component getName() {
 		return Component.literal(typeId());
+	}
+
+	/** Lets the crosshair target it, so attacks and clicks reach the server (which breaks or opens it). */
+	@Override
+	public boolean isPickable() {
+		return true;
 	}
 
 	@Override
