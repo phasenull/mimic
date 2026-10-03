@@ -131,6 +131,8 @@ public final class Placeholders {
 			} else if (registry == BuiltInRegistries.ITEM) {
 				ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, id);
 				register(BuiltInRegistries.ITEM, key, () -> new PlaceholderItem(new Item.Properties().setId(key), id.toString()));
+			} else if (registry == BuiltInRegistries.MENU) {
+				PlaceholderMenus.register(id);
 			} else if (registry == BuiltInRegistries.SOUND_EVENT) {
 				// Plays when an imported jar's sounds.json defines it (silent otherwise), instead of the
 				// server's sound packets naming an id this client can't read.
@@ -207,12 +209,12 @@ public final class Placeholders {
 
 	/** Registries whose values make their own holder when constructed (blocks, items, entity types...). */
 	private static boolean intrusive(Registry<?> registry) {
-		return registry != BuiltInRegistries.SOUND_EVENT;
+		return registry != BuiltInRegistries.SOUND_EVENT && registry != BuiltInRegistries.MENU;
 	}
 
 	/** Opens the frozen registry just long enough to add one entry (the value's constructor needs it open too). */
 	@SuppressWarnings("unchecked")
-	private static <T, V extends T> V register(Registry<T> registry, ResourceKey<T> key, Supplier<V> factory) {
+	static <T, V extends T> V register(Registry<T> registry, ResourceKey<T> key, Supplier<V> factory) {
 		try {
 			FROZEN.set(registry, false);
 			if (intrusive(registry)) {

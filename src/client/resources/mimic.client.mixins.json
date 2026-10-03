@@ -10,6 +10,7 @@
 		"PackRepositoryMixin",
 		"SoundManagerMixin",
 		"ClientBrandRetrieverMixin",
+		"MenuScreensMixin",
 		"IdMapperMixin",
 		"ClientCommonPacketListenerImplAccessor",
 		"ConnectionMixin",
