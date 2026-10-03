@@ -29,6 +29,8 @@ public final class ServerModsScreen {
 		Map<String, JoinSession.Mod> mods = JoinSession.mods();
 		rows.add(TextListScreen.Row.header(JoinSession.kind() + " server, " + mods.size() + " mods seen"));
 
+		rows.add(TextListScreen.Row.link("Privacy", "What this client sends to servers, its brand, and what to stop sending",
+			() -> PrivacyScreen.create(create(parent))));
 		Map<String, AtomicInteger> skipped = JoinSession.skipped();
 		if (!skipped.isEmpty()) {
 			int total = skipped.values().stream().mapToInt(AtomicInteger::get).sum();

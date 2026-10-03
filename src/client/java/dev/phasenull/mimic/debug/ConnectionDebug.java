@@ -110,6 +110,7 @@ public final class ConnectionDebug {
 
 	public static void sent(Packet<?> packet) {
 		out++;
+		dev.phasenull.mimic.privacy.PrivacyGuard.seen(packet);
 		packet("OUT", packet);
 	}
 
@@ -129,6 +130,26 @@ public final class ConnectionDebug {
 			return true;
 		}
 		return false;
+	}
+
+	/** Ids currently blocked from being sent. */
+	public static java.util.Set<String> blocked() {
+		if (blockedOutgoing.isEmpty()) {
+			blockedOutgoing = readBlockList();
+		}
+		return blockedOutgoing;
+	}
+
+	/** Changes the block list now and saves it for later connections. */
+	public static void setBlocked(java.util.Set<String> ids) {
+		blockedOutgoing = java.util.Set.copyOf(ids);
+		try {
+			Files.createDirectories(BLOCK_FILE.getParent());
+			Files.writeString(BLOCK_FILE, "# Outgoing packet or payload ids Mimic doesn't send (edit in Server mods > Privacy)"
+				+ System.lineSeparator() + String.join(System.lineSeparator(), new java.util.TreeSet<>(ids)) + System.lineSeparator());
+		} catch (IOException e) {
+			dev.phasenull.mimic.MimicClient.LOGGER.warn("Could not save the outgoing block list", e);
+		}
 	}
 
 	private static java.util.Set<String> readBlockList() {

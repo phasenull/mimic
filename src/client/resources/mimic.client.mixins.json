@@ -9,6 +9,7 @@
 		"EntityRenderDispatcherMixin",
 		"PackRepositoryMixin",
 		"SoundManagerMixin",
+		"ClientBrandRetrieverMixin",
 		"IdMapperMixin",
 		"ClientCommonPacketListenerImplAccessor",
 		"ConnectionMixin",
